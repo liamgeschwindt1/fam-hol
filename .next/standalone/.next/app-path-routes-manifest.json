@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/health/route": "/api/health",
+  "/api/upload/route": "/api/upload",
+  "/api/trips/[id]/comments/route": "/api/trips/[id]/comments",
+  "/trips/[id]/download-ics/route": "/trips/[id]/download-ics",
+  "/cal/[token]/route": "/cal/[token]",
+  "/page": "/",
+  "/join/[token]/page": "/join/[token]",
+  "/admin/page": "/admin",
+  "/me/page": "/me",
+  "/setup/page": "/setup",
+  "/calendar/page": "/calendar",
+  "/trips/[id]/proposals/[pid]/page": "/trips/[id]/proposals/[pid]",
+  "/trips/[id]/suggest/page": "/trips/[id]/suggest",
+  "/trips/new/page": "/trips/new",
+  "/map/page": "/map",
+  "/inbox/page": "/inbox",
+  "/trips/page": "/trips",
+  "/welcome-back/page": "/welcome-back",
+  "/trips/[id]/page": "/trips/[id]"
+}
