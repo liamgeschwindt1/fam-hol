@@ -68,7 +68,7 @@
 
 /* ─── Dark mode (thoughtful, not an inversion) ───────────────── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper:      #1A2028;
     --paper-2:    #222B34;
     --ink:        #EDE5D4;
@@ -170,4 +170,77 @@ a:hover {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ─── Manual dark-mode toggle (data-theme) ──────────────────── */
+:root[data-theme="dark"] {
+  --paper:      #1A2028;
+  --paper-2:    #222B34;
+  --ink:        #EDE5D4;
+  --ink-soft:   #8FA0AD;
+  --rule:       #2E3C47;
+  --sea:        #3BA8B4;
+  --sea-deep:   #1F6F78;
+  --clay:       #D4705A;
+  --sun:        #E8A93B;
+  --moss:       #7AAF68;
+  --snow-color: #1E3040;
+
+  --bg:         var(--paper);
+  --bg-raised:  var(--paper-2);
+  --text:       var(--ink);
+  --text-soft:  var(--ink-soft);
+  --border:     var(--rule);
+  --accent:     var(--sea);
+  --accent-deep: var(--sea-deep);
+  --danger:     var(--clay);
+  --warn:       var(--sun);
+  --success:    var(--moss);
+}
+
+/* ─── Page entrance animation ───────────────────────────────── */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+main > * {
+  animation: page-enter var(--duration-base) var(--ease-out) both;
+}
+
+/* ─── Card hover ────────────────────────────────────────────── */
+.card-hover {
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ─── Expandable sections ───────────────────────────────────── */
+.expand-transition {
+  transition: max-height var(--duration-base) var(--ease-out),
+              opacity var(--duration-base) var(--ease-out);
+  overflow: hidden;
+}
+
+/* ─── Screen-reader only ────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

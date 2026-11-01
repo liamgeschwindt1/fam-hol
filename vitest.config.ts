@@ -9,6 +9,13 @@ export default defineConfig({
     globals: true,
     include: ["**/*.{test,spec}.{ts,tsx}"],
     exclude: ["node_modules", ".next", "prisma/migrations"],
+    coverage: {
+      provider: "v8",
+      include: ["lib/costs/**/*.ts"],
+      exclude: ["lib/costs/**/*.test.ts"],
+      reporter: ["text", "json", "html"],
+      thresholds: { branches: 95 },
+    },
   },
   resolve: {
     alias: {

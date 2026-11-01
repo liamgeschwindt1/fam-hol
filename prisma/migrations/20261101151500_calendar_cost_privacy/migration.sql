@@ -1,0 +1,2 @@
+ALTER TABLE "Member" ADD COLUMN "calendarShowCosts" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Member" ADD COLUMN "calendarRevision" INTEGER NOT NULL DEFAULT 0;

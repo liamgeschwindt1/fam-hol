@@ -34,6 +34,8 @@ const eslintConfig = [
       ".next/**",
       "node_modules/**",
       "prisma/migrations/**",
+      "coverage/**",
+      "next-env.d.ts",
     ],
   },
 ];

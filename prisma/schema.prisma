@@ -144,6 +144,8 @@ model Member {
   ageBand       AgeBand  @default(ADULT)
   pinHash       String?
   calendarToken String   @unique
+  calendarShowCosts Boolean @default(true)
+  calendarRevision Int @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -233,6 +235,7 @@ model Trip {
   revision       Int         @default(1)
   chosenStayId   String?
   ageWeightsJson Json
+  bankDetails    String?
   recapMd        String?
   archivedAt     DateTime?
   createdAt      DateTime    @default(now())
@@ -423,6 +426,7 @@ model CostCategory {
   name        String
   sort        Int
   colour      String?
+  isAccommodation Boolean @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -473,8 +477,8 @@ model CostAdjustment {
 
   trip           Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  line           CostLine?     @relation(fields: [lineId], references: [id], onDelete: SetNull)
-  category       CostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  line           CostLine?     @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  category       CostCategory? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   createdBy      Member        @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
 
   @@index([tripId])

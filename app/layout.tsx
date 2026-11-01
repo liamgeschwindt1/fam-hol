@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Hanken_Grotesk, DM_Mono } from "next/font/google";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body>
         <SiteNav />
         <main>{children}</main>
+        <div id="live-region" aria-live="polite" aria-atomic="true" className="sr-only" />
       </body>
     </html>
   );
@@ -105,6 +107,9 @@ function SiteNav() {
           <NavLink href="/trips">Trips</NavLink>
           <NavLink href="/map">Map</NavLink>
           <NavLink href="/calendar">Calendar</NavLink>
+          <NavLink href="/inbox">Inbox</NavLink>
+          <NavLink href="/me">Me</NavLink>
+          <ThemeToggle />
         </div>
       </div>
     </nav>
