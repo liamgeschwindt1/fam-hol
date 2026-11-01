@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import SetupForm from "./SetupForm";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Set up your family space" };
 
 export default async function SetupPage() {

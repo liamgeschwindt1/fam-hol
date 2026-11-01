@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireMember } from "@/lib/auth";
 import AdminClient from "./AdminClient";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
 
 export default async function AdminPage() {

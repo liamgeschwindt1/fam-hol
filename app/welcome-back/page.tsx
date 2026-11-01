@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import MemberGrid from "./MemberGrid";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Who are you?" };
 
 export default async function WelcomeBackPage() {

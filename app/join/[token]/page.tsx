@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { hashToken } from "@/lib/auth";
 import JoinForm from "./JoinForm";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "Join the family" };
 
 interface Props {
