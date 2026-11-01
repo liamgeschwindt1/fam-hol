@@ -51,7 +51,12 @@ export default function RootLayout({
       <body>
         <SiteNav />
         <main>{children}</main>
-        <div id="live-region" aria-live="polite" aria-atomic="true" className="sr-only" />
+        <div
+          id="live-region"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        />
       </body>
     </html>
   );
@@ -59,31 +64,16 @@ export default function RootLayout({
 
 function SiteNav() {
   return (
-    <nav
-      aria-label="Site navigation"
-      className="site-nav"
-    >
-      <div
-        className="site-nav-inner"
-      >
-        {/* Wordmark */}
-        <Link
-          href="/"
-          style={{
-            fontFamily: "var(--font-instrument)",
-            fontSize: "var(--text-xl)",
-            fontStyle: "italic",
-            color: "var(--ink)",
-            textDecoration: "none",
-            letterSpacing: "-0.01em",
-          }}
-        >
+    <nav aria-label="Site navigation" className="site-nav">
+      <div className="site-nav-inner">
+        <Link href="/" className="site-brand">
+          <span className="site-brand-mark" aria-hidden="true">
+            f
+          </span>
           Family Trips
         </Link>
 
-        <div
-          className="site-nav-links"
-        >
+        <div className="site-nav-links">
           <NavLink href="/trips">Trips</NavLink>
           <NavLink href="/map">Map</NavLink>
           <NavLink href="/calendar">Calendar</NavLink>
@@ -104,17 +94,7 @@ function NavLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="site-nav-link"
-      style={{
-        fontSize: "var(--text-sm)",
-        fontWeight: 500,
-        color: "var(--text-soft)",
-        textDecoration: "none",
-        transition: "color var(--duration-fast) var(--ease-out)",
-      }}
-    >
+    <Link href={href} className="site-nav-link">
       {children}
     </Link>
   );
