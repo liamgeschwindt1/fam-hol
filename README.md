@@ -25,7 +25,7 @@ For Railway, provision PostgreSQL and an S3-compatible bucket, configure the var
 
 `pnpm build` explicitly generates the schema-specific Prisma client before compiling Next.js. Do not rely on dependency-install hooks: cached or skipped hooks can leave the database queries untyped and cause implicit-`any` build errors.
 
-Set Railway's `NODE_ENV` to exactly `production` (lowercase, without quotes or spaces), or remove that variable and let Next.js set it. Other values can break prerendering even after compilation succeeds. Local `.next` output and TypeScript caches are excluded from deployment uploads; Railway must build its own output.
+Set Railway's `NODE_ENV` to exactly `production` (lowercase, without quotes or spaces), or remove that variable and let Next.js set it. Other values can break prerendering even after compilation succeeds. Local `.next` output and TypeScript caches are excluded from deployment uploads; Railway must build its own output. The postbuild hook stages `public/` and `.next/static/` inside `.next/standalone/`, as required when starting the standalone server directly.
 
 ### Existing databases
 

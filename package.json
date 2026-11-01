@@ -6,6 +6,7 @@
     "dev": "next dev",
     "prebuild": "pnpm db:generate",
     "build": "next build",
+    "postbuild": "cp -r public .next/standalone/ && cp -r .next/static .next/standalone/.next/",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
