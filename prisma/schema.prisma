@@ -1,0 +1,713 @@
+// ─── Prisma schema — Family Trips ────────────────────────────────────────────
+// IDs: cuid2 (@paralleldrive/cuid2) — generated in application code.
+// Money: Int (minor units) + explicit currency String column.
+// Dates: @db.Date for calendar dates (no time / tz drift).
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AgeBand {
+  ADULT
+  CHILD_12_17
+  CHILD_5_11
+  CHILD_0_4
+}
+
+enum Season {
+  SNOW
+  SURF
+  EASTER
+  CHRISTMAS
+  NYE
+  SUMMER
+  CITY
+  OTHER
+}
+
+enum TripStatus {
+  IDEA
+  PLANNING
+  CONFIRMED
+  HAPPENING
+  DONE
+  ARCHIVED
+}
+
+enum AttendStatus {
+  IN
+  MAYBE
+  OUT
+}
+
+enum VoteValue {
+  UP
+  NEUTRAL
+  DOWN
+}
+
+enum CostBasis {
+  PER_PERSON_PER_NIGHT
+  PER_PERSON_FLAT
+  PER_ROOM_PER_NIGHT
+  SHARED_BY_PERSON_NIGHTS
+  SHARED_EQUAL
+  PER_HOUSEHOLD_FLAT
+  PER_PERSON_PER_DAY_FOOD
+}
+
+enum CostUnit {
+  NIGHT
+  DAY
+  FLAT
+}
+
+enum ProposalStatus {
+  OPEN
+  MERGED
+  REJECTED
+  WITHDRAWN
+  CONFLICTED
+}
+
+enum ChangeType {
+  TRIP_FIELD_SET
+  PROGRAM_ITEM_ADD
+  PROGRAM_ITEM_UPDATE
+  PROGRAM_ITEM_REMOVE
+  STAY_OPTION_ADD
+  STAY_OPTION_UPDATE
+  STAY_OPTION_REMOVE
+  COST_LINE_ADD
+  COST_LINE_UPDATE
+  COST_LINE_REMOVE
+  DATES_SET
+  IMAGE_ADD
+  IMAGE_REMOVE
+  ATTENDANCE_BULK
+}
+
+enum ChangeState {
+  PENDING
+  MERGED
+  SKIPPED
+  CONFLICTED
+}
+
+// ─── Family & Members ─────────────────────────────────────────────────────────
+
+model Family {
+  id               String   @id
+  name             String
+  inviteTokenHash  String
+  homeCurrency     String
+  secondCurrency   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  members          Member[]
+  trips            Trip[]
+  households       Household[]
+}
+
+model Household {
+  id        String   @id
+  familyId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  members   Member[]
+  ownStays  HouseholdOwnStay[]
+
+  @@index([familyId])
+}
+
+model Member {
+  id            String   @id
+  familyId      String
+  householdId   String?
+  name          String
+  photoKey      String?
+  isAdmin       Boolean  @default(false)
+  isDependent   Boolean  @default(false)
+  guardianId    String?
+  ageBand       AgeBand  @default(ADULT)
+  pinHash       String?
+  calendarToken String   @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  family        Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  household     Household? @relation(fields: [householdId], references: [id], onDelete: SetNull)
+  guardian      Member?    @relation("Dependents", fields: [guardianId], references: [id], onDelete: SetNull)
+  dependents    Member[]   @relation("Dependents")
+
+  sessions      Session[]
+  deviceRequests DeviceRequest[]
+
+  captainedTrips Trip[]        @relation("captain")
+  attendance     Attendance[]
+  stayVotes      StayVote[]
+  roomMemberships RoomMember[]
+  costAdjustments CostAdjustment[]
+  createdAdjustments CostAdjustment[] @relation("AdjustmentCreatedBy")
+  payments       Payment[]     @relation("PaymentFrom")
+  receivedPayments Payment[]   @relation("PaymentTo")
+  confirmedPayments Payment[]  @relation("PaymentConfirmedBy")
+  expenses       Expense[]
+  comments       Comment[]
+  reactions      Reaction[]
+  mentions       Mention[]
+  proposals      Proposal[]    @relation("ProposalAuthor")
+  mergedProposals Proposal[]   @relation("ProposalMergedBy")
+  proposalSupports ProposalSupport[]
+  tripRevisions  TripRevision[]
+  notifications  Notification[]
+  activityLogs   ActivityLog[]
+  uploadedImages TripImage[]
+  addedStayOptions StayOption[]
+
+  @@index([familyId])
+  @@index([householdId])
+  @@index([guardianId])
+}
+
+model Session {
+  id        String   @id
+  memberId  String
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model DeviceRequest {
+  id        String   @id
+  memberId  String
+  status    String
+  tokenHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+// ─── Trips ────────────────────────────────────────────────────────────────────
+
+model Trip {
+  id             String      @id
+  familyId       String
+  captainId      String
+  title          String
+  tagline        String?
+  descriptionMd  String
+  season         Season
+  status         TripStatus  @default(IDEA)
+  placeName      String?
+  lat            Float?
+  lng            Float?
+  country        String?
+  startDate      DateTime    @db.Date
+  endDate        DateTime    @db.Date
+  coverImageId   String?
+  currency       String
+  fxRatesJson    Json?
+  fxAsOf         DateTime?
+  revision       Int         @default(1)
+  chosenStayId   String?
+  ageWeightsJson Json
+  recapMd        String?
+  archivedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  family         Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  captain        Member      @relation("captain", fields: [captainId], references: [id])
+  chosenStay     StayOption? @relation("ChosenStay", fields: [chosenStayId], references: [id])
+
+  images         TripImage[]
+  attendance     Attendance[]
+  programItems   ProgramItem[]
+  stayOptions    StayOption[]  @relation("TripStayOptions")
+  householdOwnStays HouseholdOwnStay[]
+  rooms          Room[]
+  costCategories CostCategory[]
+  costLines      CostLine[]
+  costAdjustments CostAdjustment[]
+  costSnapshots  CostSnapshot[]
+  payments       Payment[]
+  expenses       Expense[]
+  comments       Comment[]
+  proposals      Proposal[]
+  revisions      TripRevision[]
+  activityLogs   ActivityLog[]
+
+  @@index([familyId])
+  @@index([captainId])
+  @@index([status])
+  @@index([season])
+}
+
+model TripImage {
+  id           String   @id
+  tripId       String
+  storageKey   String
+  width        Int
+  height       Int
+  blurDataUrl  String
+  caption      String?
+  credit       String?
+  sort         Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trip         Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  uploadedBy   Member   @relation(fields: [uploadedById], references: [id])
+
+  @@index([tripId])
+  @@index([uploadedById])
+}
+
+model Attendance {
+  tripId    String
+  memberId  String
+  date      DateTime     @db.Date
+  status    AttendStatus
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  trip      Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  member    Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, memberId, date])
+  @@index([tripId, date])
+  @@index([memberId])
+}
+
+model ProgramItem {
+  id        String   @id
+  tripId    String
+  date      DateTime @db.Date
+  time      String?
+  title     String
+  notes     String?
+  placeName String?
+  lat       Float?
+  lng       Float?
+  url       String?
+  sort      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, date])
+}
+
+// ─── Stay ─────────────────────────────────────────────────────────────────────
+
+model StayOption {
+  id              String   @id
+  tripId          String
+  title           String
+  url             String
+  sourceDomain    String?
+  imageKey        String?
+  priceNote       String?
+  totalPriceMinor Int?
+  currency        String?
+  nights          Int?
+  rooms           Int?
+  capacity        Int?
+  pros            String?
+  cons            String?
+  addedById       String
+  lat             Float?
+  lng             Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trip            Trip     @relation("TripStayOptions", fields: [tripId], references: [id], onDelete: Cascade)
+  addedBy         Member   @relation(fields: [addedById], references: [id])
+  votes           StayVote[]
+  chosenForTrips  Trip[]   @relation("ChosenStay")
+  roomAssignments Room[]
+
+  @@index([tripId])
+  @@index([addedById])
+}
+
+model StayVote {
+  stayOptionId String
+  memberId     String
+  value        VoteValue
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  stayOption   StayOption @relation(fields: [stayOptionId], references: [id], onDelete: Cascade)
+  member       Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([stayOptionId, memberId])
+  @@index([stayOptionId])
+  @@index([memberId])
+}
+
+model HouseholdOwnStay {
+  tripId      String
+  householdId String
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  trip        Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, householdId])
+  @@index([tripId])
+  @@index([householdId])
+}
+
+model Room {
+  id           String      @id
+  tripId       String
+  label        String
+  stayOptionId String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  trip         Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  stayOption   StayOption? @relation(fields: [stayOptionId], references: [id], onDelete: SetNull)
+  members      RoomMember[]
+
+  @@index([tripId])
+  @@index([stayOptionId])
+}
+
+model RoomMember {
+  roomId    String
+  memberId  String
+  createdAt DateTime @default(now())
+
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, memberId])
+  @@index([roomId])
+  @@index([memberId])
+}
+
+// ─── Costs ────────────────────────────────────────────────────────────────────
+
+model CostCategory {
+  id          String     @id
+  tripId      String
+  name        String
+  sort        Int
+  colour      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  trip        Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  lines       CostLine[]
+  adjustments CostAdjustment[]
+
+  @@index([tripId])
+}
+
+model CostLine {
+  id               String    @id
+  categoryId       String
+  tripId           String
+  label            String
+  amountMinor      Int
+  currency         String
+  basis            CostBasis
+  unit             CostUnit
+  applyAgeWeights  Boolean   @default(true)
+  mealsPerDay      Int?
+  note             String?
+  url              String?
+  sort             Int
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  category         CostCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  trip             Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  adjustments      CostAdjustment[]
+
+  @@index([categoryId])
+  @@index([tripId])
+}
+
+model CostAdjustment {
+  id             String   @id
+  tripId         String
+  memberId       String
+  lineId         String?
+  categoryId     String?
+  deltaMinor     Int?
+  overrideMinor  Int?
+  reason         String?
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  trip           Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  member         Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  line           CostLine?     @relation(fields: [lineId], references: [id], onDelete: SetNull)
+  category       CostCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdBy      Member        @relation("AdjustmentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([tripId])
+  @@index([memberId])
+  @@index([lineId])
+  @@index([categoryId])
+  @@index([createdById])
+}
+
+model CostSnapshot {
+  id          String   @id
+  tripId      String
+  inputHash   String
+  outputJson  Json
+  computedAt  DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, inputHash])
+}
+
+// ─── Payments & Expenses ──────────────────────────────────────────────────────
+
+model Payment {
+  id            String    @id
+  tripId        String
+  fromMemberId  String
+  toMemberId    String?
+  amountMinor   Int
+  currency      String
+  method        String
+  paidOn        DateTime  @db.Date
+  note          String?
+  proofKey      String?
+  confirmedAt   DateTime?
+  confirmedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  trip          Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  fromMember    Member    @relation("PaymentFrom", fields: [fromMemberId], references: [id])
+  toMember      Member?   @relation("PaymentTo", fields: [toMemberId], references: [id])
+  confirmedBy   Member?   @relation("PaymentConfirmedBy", fields: [confirmedById], references: [id])
+
+  @@index([tripId])
+  @@index([fromMemberId])
+  @@index([toMemberId])
+  @@index([confirmedById])
+}
+
+model Expense {
+  id             String   @id
+  tripId         String
+  paidByMemberId String
+  categoryId     String?
+  amountMinor    Int
+  currency       String
+  description    String
+  receiptKey     String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  trip           Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  paidBy         Member   @relation(fields: [paidByMemberId], references: [id])
+
+  @@index([tripId])
+  @@index([paidByMemberId])
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model Comment {
+  id         String    @id
+  tripId     String
+  targetType String
+  targetId   String
+  parentId   String?
+  authorId   String
+  bodyMd     String
+  editedAt   DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  trip       Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  author     Member    @relation(fields: [authorId], references: [id])
+  reactions  Reaction[]
+  mentions   Mention[]
+
+  @@index([tripId])
+  @@index([authorId])
+  @@index([tripId, targetType, targetId])
+  @@index([parentId])
+}
+
+model Reaction {
+  commentId String
+  memberId  String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, memberId, emoji])
+  @@index([commentId])
+  @@index([memberId])
+}
+
+model Mention {
+  commentId String
+  memberId  String
+  createdAt DateTime @default(now())
+
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, memberId])
+  @@index([commentId])
+  @@index([memberId])
+}
+
+// ─── Proposals ────────────────────────────────────────────────────────────────
+
+model Proposal {
+  id            String         @id
+  tripId        String
+  authorId      String
+  title         String
+  descriptionMd String?
+  baseRevision  Int
+  status        ProposalStatus
+  mergedAt      DateTime?
+  mergedById    String?
+  rejectReason  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  trip          Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  author        Member         @relation("ProposalAuthor", fields: [authorId], references: [id])
+  mergedBy      Member?        @relation("ProposalMergedBy", fields: [mergedById], references: [id])
+  changes       Change[]
+  supporters    ProposalSupport[]
+  revisions     TripRevision[]
+
+  @@index([tripId])
+  @@index([authorId])
+  @@index([mergedById])
+  @@index([status])
+}
+
+model Change {
+  id          String      @id
+  proposalId  String
+  type        ChangeType
+  targetId    String?
+  beforeJson  Json?
+  afterJson   Json
+  state       ChangeState @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  proposal    Proposal    @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+model ProposalSupport {
+  proposalId String
+  memberId   String
+  createdAt  DateTime @default(now())
+
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([proposalId, memberId])
+  @@index([proposalId])
+  @@index([memberId])
+}
+
+model TripRevision {
+  id           String   @id
+  tripId       String
+  revision     Int
+  snapshotJson Json
+  actorId      String
+  summary      String
+  proposalId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trip         Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  actor        Member   @relation(fields: [actorId], references: [id])
+  proposal     Proposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+
+  @@unique([tripId, revision])
+  @@index([tripId])
+  @@index([actorId])
+  @@index([proposalId])
+}
+
+// ─── Notifications & Logs ─────────────────────────────────────────────────────
+
+model Notification {
+  id          String    @id
+  memberId    String
+  type        String
+  payloadJson Json
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@index([memberId, readAt])
+}
+
+model ActivityLog {
+  id          String   @id
+  tripId      String?
+  actorId     String
+  type        String
+  payloadJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trip        Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  actor       Member   @relation(fields: [actorId], references: [id])
+
+  @@index([tripId])
+  @@index([actorId])
+}
