@@ -2,8 +2,7 @@ import type { Season, TripStatus } from "@prisma/client";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { SeasonChip } from "@/components/SeasonChip";
 import { StatusBadge } from "@/components/StatusBadge";
-
-const S3_BASE = process.env.NEXT_PUBLIC_S3_BASE_URL ?? "";
+import { imageUrl } from "@/lib/images";
 
 interface TripHeaderProps {
   title: string;
@@ -40,8 +39,7 @@ export function TripHeader({
   endDate,
   captain,
 }: TripHeaderProps) {
-  const coverUrl =
-    coverStorageKey && S3_BASE ? `${S3_BASE}/${coverStorageKey}` : null;
+  const coverUrl = imageUrl(coverStorageKey);
 
   return (
     <header>

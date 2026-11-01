@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/api/health",
   "/cal/",
   "/api/upload",
+  "/api/images",
 ];
 
 export function middleware(request: NextRequest) {

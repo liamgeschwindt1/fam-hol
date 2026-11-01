@@ -7,7 +7,7 @@ A private family trip planner built with Next.js, PostgreSQL and Prisma.
 Use Node 22 and pnpm 9.
 
 1. Copy `.env.example` to `.env` and configure a development PostgreSQL database.
-2. Set `APP_URL` to the application's origin. Set `RESEND_API_KEY` and a verified `EMAIL_FROM` address to send group invitations. Configure the S3 variables to enable images and payment screenshots.
+2. Set `APP_URL` to the application's origin. Configure the S3 variables to enable images and payment screenshots.
 3. Run:
 
    ```sh
@@ -19,7 +19,11 @@ Use Node 22 and pnpm 9.
 
 4. Open the app to create your account and first group. On a fresh database, visitors without a session are automatically sent to `/setup`; you can also open that address directly. Returning visitors can sign in with email and PIN, create additional groups, and switch between them.
 
-Group members can invite others by email or share an invitation link. Trips can be created without dates; dates are required only when confirming a trip. Trip creators can invite group members and members can RSVP.
+Group members share an invitation link, valid for 30 days and reusable by multiple people. Creating another link does not invalidate existing links. **Open email app** prepares a draft containing the link in the inviter's own email client; the inviter chooses the account and sends it. No email delivery provider is required. Invitees create their own profile and join without admin approval. Profiles get an automatic emoji icon and can optionally upload a photo during signup or from **Me**.
+
+Trips can be created without dates; dates are required only when confirming a trip. Trip creators can invite group members and members can RSVP. Trips and Map retain year filtering but no longer show season/status filter bars.
+
+Cover/profile photos upload through the app to S3, with validation, resizing and explicit errors. Photo URLs are served through `/api/images/`; no public bucket URL or browser-to-bucket CORS setup is needed. The bucket and S3 credentials still need to be configured. Trip images require membership in their group. Profile photo URLs remain accessible to people holding the URL, so returning visitors can see avatars before signing in. Unreferenced uploads and payment proof documents are not exposed by this route.
 
 For Railway, provision PostgreSQL and an S3-compatible bucket, configure the variables in `.env.example`, and deploy using `railway.json`.
 

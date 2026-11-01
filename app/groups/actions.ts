@@ -9,8 +9,6 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { COOKIE_NAME, hashToken, setSessionCookie } from "@/lib/auth";
 import { requireMember } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
-import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function switchGroup(formData: FormData) {
   const memberId = z.string().min(1).parse(formData.get("memberId"));
@@ -110,72 +108,22 @@ export async function createGroup(formData: FormData) {
   redirect("/");
 }
 
-export type InviteEmailState = { error?: string; success?: string };
-
-export async function inviteByEmail(
-  _previous: InviteEmailState,
-  formData: FormData,
-): Promise<InviteEmailState> {
-  const parsed = z.string().email().max(254).safeParse(formData.get("email"));
-  if (!parsed.success) return { error: "Enter a valid email address." };
-
-  const { family, member } = await requireMember();
-  const email = parsed.data.trim().toLowerCase();
+export async function createGroupInviteLink(): Promise<string> {
+  const { family } = await requireMember();
   const requestHeaders = await headers();
-  const ip =
-    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!checkRateLimit(`group-invite:${family.id}:${member.id}:${ip}`, 5, 15 * 60 * 1000)) {
-    return { error: "Too many invitations sent. Please wait 15 minutes." };
-  }
+  const host = requestHeaders.get("host");
+  const origin = process.env.APP_URL
+    ?? (host ? `${requestHeaders.get("x-forwarded-proto") ?? "http"}://${host}` : null);
+  if (!origin) throw new Error("Set APP_URL to create group invitation links.");
   const rawToken = crypto.randomBytes(32).toString("base64url");
-  const inviteUrl = new URL(`/join/${rawToken}`, process.env.APP_URL ?? "http://localhost:3000").toString();
-  const invite = await db.groupInvitation.create({
+  const inviteUrl = new URL(`/join/${rawToken}`, origin).toString();
+  await db.groupInvitation.create({
     data: {
       id: createId(),
       familyId: family.id,
-      email,
       tokenHash: hashToken(rawToken),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
-
-  try {
-    const safeGroupName = family.name.replace(/[&<>"']/g, (character) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    })[character]!);
-    await sendEmail({
-      to: email,
-      subject: `You're invited to join ${family.name}`,
-      text: `You've been invited to join ${family.name}. Create your group profile here: ${inviteUrl}`,
-      html: `<p>You've been invited to join <strong>${safeGroupName}</strong>.</p><p><a href="${inviteUrl}">Accept the invitation</a></p><p>This link expires in seven days.</p>`,
-    });
-  } catch (error) {
-    await db.groupInvitation.delete({ where: { id: invite.id } });
-    console.error("Group invitation email failed", { familyId: family.id, error });
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not send the invitation email.",
-    };
-  }
-
-  return { success: `Invitation sent to ${email}.` };
-}
-
-export async function createGroupInviteLink(): Promise<string> {
-  const { family } = await requireMember();
-  const rawToken = crypto.randomBytes(32).toString("base64url");
-  await db.family.update({
-    where: { id: family.id },
-    data: { inviteTokenHash: hashToken(rawToken) },
-  });
-  return new URL(
-    `/join/${rawToken}`,
-    process.env.APP_URL ?? "http://localhost:3000",
-  ).toString();
+  return inviteUrl;
 }

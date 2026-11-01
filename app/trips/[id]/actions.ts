@@ -167,6 +167,8 @@ export async function updateTrip(formData: FormData) {
   });
 
   revalidatePath(`/trips/${trip.id}`);
+  revalidatePath("/trips");
+  revalidatePath("/map");
 }
 
 const STATUS_ORDER: readonly string[] = [

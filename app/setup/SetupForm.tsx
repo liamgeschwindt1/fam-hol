@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { setupFamily, type SetupState } from "./actions";
 import { PhotoCropper } from "@/components/PhotoCropper";
+import { MemberAvatar } from "@/components/MemberAvatar";
 
 const CURRENCIES = [
   { code: "GBP", label: "GBP — British Pound" },
@@ -23,6 +24,8 @@ const initialState: SetupState = {};
 export default function SetupForm() {
   const [state, action, pending] = useActionState(setupFamily, initialState);
   const [photoKey, setPhotoKey] = useState<string>("");
+  const [name, setName] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoKeyRef = useRef<HTMLInputElement>(null);
 
   function handlePhotoUploaded(key: string) {
@@ -70,6 +73,8 @@ export default function SetupForm() {
           placeholder="e.g. Sarah"
           style={inputStyle}
           autoComplete="given-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
         />
         {state.errors?.adminName && (
           <p style={errorStyle}>{state.errors.adminName[0]}</p>
@@ -109,8 +114,10 @@ export default function SetupForm() {
 
       {/* Photo */}
       <div>
-        <span style={labelStyle}>Your photo (optional)</span>
-        <PhotoCropper onUploaded={handlePhotoUploaded} />
+        <span style={labelStyle}>Your icon</span>
+        {!photoKey && <MemberAvatar name={name || "New explorer"} photoKey={null} size={64} />}
+        <p style={{ fontSize: "var(--text-xs)", color: "var(--text-soft)" }}>Your emoji is automatic. A photo is optional.</p>
+        <PhotoCropper onUploaded={handlePhotoUploaded} onUploadingChange={setUploadingPhoto} />
         <input
           ref={photoKeyRef}
           type="hidden"
@@ -156,10 +163,10 @@ export default function SetupForm() {
 
       <button
         type="submit"
-        disabled={pending}
-        style={buttonStyle(pending)}
+        disabled={pending || uploadingPhoto}
+        style={buttonStyle(pending || uploadingPhoto)}
       >
-        {pending ? "Creating…" : "Create family space"}
+        {uploadingPhoto ? "Uploading photo…" : pending ? "Creating…" : "Create family space"}
       </button>
     </form>
   );

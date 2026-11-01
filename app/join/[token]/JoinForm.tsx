@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { joinFamily, type JoinState } from "./actions";
 import { PhotoCropper } from "@/components/PhotoCropper";
+import { MemberAvatar } from "@/components/MemberAvatar";
 
 interface Household {
   id: string;
@@ -21,9 +22,9 @@ const initialState: JoinState = {};
 export default function JoinForm({ token, invitedEmail, accountEmail, households }: JoinFormProps) {
   const [state, action, pending] = useActionState(joinFamily, initialState);
   const [photoKey, setPhotoKey] = useState("");
-  const [householdValue, setHouseholdValue] = useState(
-    households[0]?.id ?? "new",
-  );
+  const [name, setName] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [householdValue, setHouseholdValue] = useState("");
   const photoKeyRef = useRef<HTMLInputElement>(null);
 
   function handlePhotoUploaded(key: string) {
@@ -31,8 +32,7 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
     if (photoKeyRef.current) photoKeyRef.current.value = key;
   }
 
-  const showNewHousehold =
-    householdValue === "new" || households.length === 0;
+  const showNewHousehold = householdValue === "new";
 
   return (
     <form
@@ -65,6 +65,8 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
           placeholder="e.g. James"
           style={inputStyle}
           autoComplete="given-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
         />
         {state.errors?.name && (
           <p style={errorStyle}>{state.errors.name[0]}</p>
@@ -89,15 +91,20 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
 
       {/* Photo */}
       <div>
-        <span style={labelStyle}>Photo</span>
-        <PhotoCropper onUploaded={handlePhotoUploaded} />
+        <span style={labelStyle}>Your icon</span>
+        {!photoKey && <MemberAvatar name={name || "New explorer"} photoKey={null} size={64} />}
+        <p style={{ fontSize: "var(--text-xs)", color: "var(--text-soft)" }}>
+          Your emoji is automatic. You can add a photo now or later.
+        </p>
+        <PhotoCropper onUploaded={handlePhotoUploaded} onUploadingChange={setUploadingPhoto} />
         {state.errors?.photoKey && (
           <p style={errorStyle}>{state.errors.photoKey[0]}</p>
         )}
       </div>
 
       {/* Household */}
-      <div>
+      <details>
+        <summary style={{ color: "var(--text-soft)", cursor: "pointer" }}>Household (optional)</summary>
         <label htmlFor="householdId" style={labelStyle}>
           Household
         </label>
@@ -108,6 +115,7 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
           onChange={(e) => setHouseholdValue(e.target.value)}
           style={selectStyle}
         >
+          <option value="">No household for now</option>
           {households.map((h) => (
             <option key={h.id} value={h.id}>
               {h.name}
@@ -125,7 +133,7 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
             autoComplete="off"
           />
         )}
-      </div>
+      </details>
 
       {!accountEmail && <div>
         <label htmlFor="pin" style={labelStyle}>Account PIN (4–8 digits)</label>
@@ -148,8 +156,8 @@ export default function JoinForm({ token, invitedEmail, accountEmail, households
         {state.errors?.pin && <p style={errorStyle}>{state.errors.pin[0]}</p>}
       </div>}
 
-      <button type="submit" disabled={pending} style={buttonStyle(pending)}>
-        {pending ? "Joining…" : "Join the family"}
+      <button type="submit" disabled={pending || uploadingPhoto} style={buttonStyle(pending || uploadingPhoto)}>
+        {uploadingPhoto ? "Uploading photo…" : pending ? "Joining…" : "Create profile & join group"}
       </button>
     </form>
   );

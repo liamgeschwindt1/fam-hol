@@ -13,6 +13,7 @@ import { CostsTab } from "./CostsTab";
 import type { CommentData } from "@/components/CommentThread";
 import type { Metadata } from "next";
 import { z } from "zod";
+import { tripCoverKey } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function TripPage({ params, searchParams }: PageProps) {
       },
       images: {
         orderBy: { sort: "asc" },
-        take: 1,
+        select: { id: true, storageKey: true },
       },
     },
   });
@@ -56,7 +57,7 @@ export default async function TripPage({ params, searchParams }: PageProps) {
 
   const activeTab = tab ?? "overview";
   const isCaptain = trip.captainId === member.id;
-  const coverStorageKey = trip.images[0]?.storageKey ?? null;
+  const coverStorageKey = tripCoverKey(trip);
   const [tripParticipants, groupMembers] = await Promise.all([
     db.tripParticipant.findMany({
       where: { tripId: trip.id },

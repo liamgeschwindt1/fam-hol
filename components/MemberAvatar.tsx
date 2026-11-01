@@ -1,25 +1,26 @@
+"use client";
+
+import { useState } from "react";
+import { imageUrl } from "@/lib/images";
+
 interface MemberAvatarProps {
   name: string;
   photoKey: string | null | undefined;
   size?: number;
 }
 
-const S3_BASE = process.env.NEXT_PUBLIC_S3_BASE_URL ?? "";
+const EMOJIS = ["🐬", "🌴", "🐢", "🦋", "🌻", "🦊", "🐙", "🐧", "🐨", "🌈", "🍉", "🦉"];
 
 export function MemberAvatar({ name, photoKey, size = 48 }: MemberAvatarProps) {
-  const initials = name
-    .split(" ")
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
+  const photoUrl = imageUrl(photoKey);
 
-  if (photoKey && S3_BASE) {
+  if (photoUrl && failedPhoto !== photoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={`${S3_BASE}/${photoKey}`}
+        src={photoUrl}
+        onError={() => setFailedPhoto(photoUrl)}
         alt={name}
         width={size}
         height={size}
@@ -34,29 +35,29 @@ export function MemberAvatar({ name, photoKey, size = 48 }: MemberAvatarProps) {
     );
   }
 
-  // Fallback: initials avatar with a consistent colour derived from name
   const hue = stringToHue(name);
 
   return (
     <div
+      role="img"
       aria-label={name}
       style={{
         width: size,
         height: size,
         borderRadius: "50%",
-        backgroundColor: `hsl(${hue}, 40%, 55%)`,
+        backgroundColor: `hsl(${hue}, 45%, 90%)`,
         color: "#fff",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: size * 0.38,
+        fontSize: size * 0.52,
         fontWeight: 600,
         letterSpacing: "-0.01em",
         flexShrink: 0,
         userSelect: "none",
       }}
     >
-      {initials}
+      <span aria-hidden="true">{EMOJIS[hue % EMOJIS.length]}</span>
     </div>
   );
 }

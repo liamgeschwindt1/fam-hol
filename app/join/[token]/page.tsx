@@ -3,7 +3,7 @@ import { getCurrentSession, hashToken } from "@/lib/auth";
 import JoinForm from "./JoinForm";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Join the family" };
+export const metadata = { title: "Join a group" };
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -55,8 +55,7 @@ export default async function JoinPage({ params }: Props) {
           Invalid invite link
         </h1>
         <p style={{ color: "var(--text-soft)", fontSize: "var(--text-sm)" }}>
-          This link may have expired or been regenerated. Ask your family admin
-          for a fresh one.
+          This link may have expired. Ask someone in the group for a fresh one.
         </p>
       </div>
     );
@@ -99,7 +98,7 @@ export default async function JoinPage({ params }: Props) {
             margin: "0 0 var(--space-8)",
           }}
         >
-          Fill in your details to join the family trip planner.
+          Create your profile and start planning with the group. No approval needed.
         </p>
 
         <JoinForm

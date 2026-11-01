@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { Season } from "@prisma/client";
 import { updateTrip } from "./actions";
+import { uploadImage } from "@/lib/images";
 
 const SEASONS = [
   { value: "SNOW", label: "Snow" },
@@ -58,6 +59,12 @@ export function EditTripModal({
 }: EditTripModalProps) {
   const [coverImageKey, setCoverImageKey] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+  }, [coverPreview]);
 
   const [error, formAction, isPending] = useActionState(
     async (_prev: string | null, formData: FormData) => {
@@ -81,23 +88,18 @@ export function EditTripModal({
     if (!file) return;
 
     setUploading(true);
+    setUploadError(null);
+    setCoverImageKey("");
+    setCoverPreview(null);
     try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const { key } = (await res.json()) as { url: string; key: string };
+      const key = await uploadImage(file, file.name);
       setCoverImageKey(key);
-    } catch {
-      // User can retry
+      setCoverPreview(URL.createObjectURL(file));
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Photo upload failed.");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   }
 
@@ -251,8 +253,14 @@ export function EditTripModal({
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={handleImageUpload}
+              disabled={uploading}
               style={{ fontSize: "var(--text-sm)" }}
             />
+            {coverPreview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverPreview} alt="New cover preview" style={{ width: "100%", marginTop: "12px", borderRadius: "12px" }} />
+            )}
+            {uploadError && <p role="alert" style={{ color: "var(--danger)" }}>{uploadError}</p>}
             {uploading && (
               <span
                 style={{
@@ -317,7 +325,7 @@ export function EditTripModal({
             </button>
             <button
               type="submit"
-              disabled={isPending}
+              disabled={isPending || uploading}
               style={{
                 minHeight: "44px",
                 padding: "0 20px",

@@ -1,26 +1,27 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import {
-  createGroupInviteLink,
-  inviteByEmail,
-  type InviteEmailState,
-} from "./actions";
+import { useState } from "react";
+import { createGroupInviteLink } from "./actions";
+import { groupInviteEmailUrl } from "@/lib/invitations";
 
-const initialState: InviteEmailState = {};
-
-export function GroupInvites({ baseUrl }: { baseUrl: string }) {
-  const [state, action, pending] = useActionState(inviteByEmail, initialState);
+export function GroupInvites({ groupName }: { groupName: string }) {
   const [link, setLink] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [email, setEmail] = useState("");
+  const [copied, setCopied] = useState(false);
 
   async function makeLink() {
     setLinkError(null);
+    setCreating(true);
+    setCopied(false);
     try {
       setLink(await createGroupInviteLink());
     } catch (error) {
       console.error("Could not create group invitation link", error);
       setLinkError("Could not create an invitation link. Please try again.");
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -28,6 +29,7 @@ export function GroupInvites({ baseUrl }: { baseUrl: string }) {
     if (!link) return;
     try {
       await navigator.clipboard.writeText(link);
+      setCopied(true);
     } catch (error) {
       console.error("Could not copy group invitation link", error);
       setLinkError("Could not copy automatically. Select and copy the link.");
@@ -37,41 +39,43 @@ export function GroupInvites({ baseUrl }: { baseUrl: string }) {
   return (
     <section className="group-invites">
       <h2>Invite people</h2>
-      <p>They can join this group and create their own profile.</p>
-      <form action={action} className="group-invite-email">
-        <label htmlFor="invite-email">Invite by email</label>
-        <div>
-          <input
-            id="invite-email"
-            name="email"
-            type="email"
-            required
-            placeholder="friend@example.com"
-            autoComplete="email"
-          />
-          <button type="submit" disabled={pending}>
-            {pending ? "Sending…" : "Send invite"}
-          </button>
-        </div>
-        {state.error && <p role="alert" className="group-error">{state.error}</p>}
-        {state.success && <p role="status" className="group-success">{state.success}</p>}
-      </form>
+      <p>Share a link. They create a profile, join the group and can start contributing. No admin approval needed.</p>
 
       <div className="group-invite-link">
         <div>
-          <strong>Or share a link</strong>
-          <p>Anyone with the link can join. Creating a new link invalidates the previous one.</p>
+          <strong>One link for your people</strong>
+          <p>Anyone with the link can join for 30 days. Existing links still work when you create another.</p>
         </div>
-        <button type="button" onClick={makeLink}>Create invite link</button>
+        <button type="button" onClick={makeLink} disabled={creating}>
+          {creating ? "Creating…" : "Create invite link"}
+        </button>
         {link && (
           <div className="group-link-actions">
             <input aria-label="Group invite link" readOnly value={link} onFocus={(event) => event.currentTarget.select()} />
-            <button type="button" onClick={copyLink}>Copy</button>
+            <button type="button" onClick={copyLink}>{copied ? "Copied!" : "Copy"}</button>
           </div>
         )}
       </div>
+      {link && (
+        <div className="group-invite-email">
+          <label htmlFor="invite-email">Or email the link from your inbox</label>
+          <div>
+            <input
+              id="invite-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Recipient (optional)"
+              autoComplete="off"
+            />
+            <a className="action-primary" href={groupInviteEmailUrl(groupName, link, email)}>
+              Open email app
+            </a>
+          </div>
+          <p>Opens a draft in your email app. Choose your account and send it yourself.</p>
+        </div>
+      )}
       {linkError && <p role="alert" className="group-error">{linkError}</p>}
-      <small>Invite links point to {baseUrl}.</small>
     </section>
   );
 }

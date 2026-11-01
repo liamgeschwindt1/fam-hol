@@ -1,20 +1,33 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { uploadImage } from "@/lib/images";
 
 interface PhotoCropperProps {
-  onUploaded: (key: string) => void;
+  onUploaded: (key: string) => void | Promise<void>;
+  onUploadingChange?: (uploading: boolean) => void;
 }
 
 const MAX_SIZE = 400; // output square side in px
 
-export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
+export function PhotoCropper({ onUploaded, onUploadingChange }: PhotoCropperProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState(false);
+
+  function setBusy(busy: boolean) {
+    setUploading(busy);
+    onUploadingChange?.(busy);
+  }
+
+  function fail(message: string) {
+    setError(message);
+    setPreview(null);
+    setBusy(false);
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -33,21 +46,31 @@ export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
       return;
     }
 
+    setBusy(true);
     const reader = new FileReader();
+    reader.onerror = () => fail("Could not read this photo. Please choose another image.");
     reader.onload = (evt) => {
-      const src = evt.target?.result as string;
+      const src = evt.target?.result;
+      if (typeof src !== "string") {
+        fail("Could not read this photo. Please choose another image.");
+        return;
+      }
       const img = new Image();
+      img.onerror = () => fail("This image format could not be read. Try a JPEG or PNG photo.");
       img.onload = () => {
-        cropAndUpload(img, file.type, file.name);
+        cropAndUpload(img, file.name);
       };
       img.src = src;
     };
     reader.readAsDataURL(file);
   }
 
-  function cropAndUpload(img: HTMLImageElement, mimeType: string, filename: string) {
+  function cropAndUpload(img: HTMLImageElement, filename: string) {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      fail("Photo editor is unavailable. Please try again.");
+      return;
+    }
 
     // Square-crop from center
     const side = Math.min(img.width, img.height);
@@ -57,7 +80,10 @@ export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
     canvas.width = MAX_SIZE;
     canvas.height = MAX_SIZE;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      fail("Photo editor is unavailable in this browser.");
+      return;
+    }
 
     ctx.drawImage(img, sx, sy, side, side, 0, 0, MAX_SIZE, MAX_SIZE);
     setPreview(canvas.toDataURL("image/jpeg", 0.92));
@@ -65,43 +91,19 @@ export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
     // Upload
     canvas.toBlob(
       async (blob) => {
-        if (!blob) return;
-        setUploading(true);
+        if (!blob) {
+          fail("Could not prepare this photo. Please try another image.");
+          return;
+        }
         try {
-          // Get presigned URL
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              filename: filename,
-              contentType: "image/jpeg",
-              size: blob.size,
-            }),
-          });
-
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({})) as { error?: string };
-            throw new Error(body.error ?? "Upload failed");
-          }
-
-          const { url, key } = await res.json() as { url: string; key: string };
-
-          // Upload to S3
-          const s3Res = await fetch(url, {
-            method: "PUT",
-            headers: { "Content-Type": "image/jpeg" },
-            body: blob,
-          });
-
-          if (!s3Res.ok) throw new Error("S3 upload failed");
-
-          onUploaded(key);
+          const key = await uploadImage(blob, filename);
+          await onUploaded(key);
           setUploaded(true);
         } catch (err) {
           setError(err instanceof Error ? err.message : "Upload failed");
           setPreview(null);
         } finally {
-          setUploading(false);
+          setBusy(false);
         }
       },
       "image/jpeg",
@@ -141,6 +143,7 @@ export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
             )}
             <button
               type="button"
+              disabled={uploading}
               onClick={() => {
                 setPreview(null);
                 setUploaded(false);
@@ -159,16 +162,17 @@ export function PhotoCropper({ onUploaded }: PhotoCropperProps) {
             type="file"
             accept="image/*"
             onChange={handleFileChange}
+            disabled={uploading}
             style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer" }}
           />
           <span style={{ fontSize: "var(--text-sm)", color: "var(--text-soft)" }}>
-            Choose photo
+            {uploading ? "Preparing photo…" : "Choose photo (optional)"}
           </span>
         </label>
       )}
 
       {error && (
-        <p style={{ fontSize: "var(--text-xs)", color: "var(--danger)", marginTop: "var(--space-2)" }}>
+        <p role="alert" style={{ fontSize: "var(--text-xs)", color: "var(--danger)", marginTop: "var(--space-2)" }}>
           {error}
         </p>
       )}

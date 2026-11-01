@@ -9,6 +9,17 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+export async function updateProfilePhoto(photoKey: string) {
+  const key = z.string().regex(/^photos\/[a-f0-9]{32}\.jpeg$/).parse(photoKey);
+  const { member } = await requireMember();
+  await db.member.update({
+    where: { id: member.id },
+    data: { photoKey: key },
+  });
+  revalidatePath("/me");
+  revalidatePath("/groups");
+}
+
 export async function setCalendarCostVisibility(visible: boolean) {
   const value = z.boolean().parse(visible);
   const { member, family } = await requireMember();

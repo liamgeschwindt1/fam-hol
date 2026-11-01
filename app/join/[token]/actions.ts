@@ -16,7 +16,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const JoinSchema = z.object({
   token: z.string().min(1),
-  name: z.string().min(1, "Name is required").max(80),
+  name: z.string().trim().min(1, "Name is required").max(80),
   email: z.string().trim().email("Enter a valid email address").max(254),
   photoKey: z.string().optional(),
   householdId: z.string().optional(),
@@ -46,7 +46,7 @@ export async function joinFamily(
     token: formData.get("token"),
     name: formData.get("name"),
     email: formData.get("email"),
-    photoKey: formData.get("photoKey") ?? undefined,
+    photoKey: formData.get("photoKey") || undefined,
     householdId: formData.get("householdId") ?? undefined,
     newHouseholdName: formData.get("newHouseholdName") ?? undefined,
     pin: formData.get("pin") ?? undefined,
@@ -176,7 +176,7 @@ export async function joinFamily(
     });
   }
 
-  if (validInvitation) {
+  if (validInvitation?.email) {
     await db.groupInvitation.update({
       where: { id: validInvitation.id },
       data: { acceptedAt: new Date() },

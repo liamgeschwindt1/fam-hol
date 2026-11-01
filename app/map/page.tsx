@@ -3,8 +3,9 @@ import { db } from "@/lib/db";
 import { TripMap } from "@/components/LazyTripMap";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { Season, TripStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import type { MapTrip } from "@/components/TripMap";
+import { imageUrl, tripCoverKey } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -12,30 +13,8 @@ export const metadata: Metadata = {
   title: "Map",
 };
 
-const S3_BASE = process.env.NEXT_PUBLIC_S3_BASE_URL ?? "";
-
-const SEASON_OPTIONS: { value: Season; label: string }[] = [
-  { value: "SNOW", label: "Snow" },
-  { value: "SURF", label: "Surf" },
-  { value: "EASTER", label: "Easter" },
-  { value: "CHRISTMAS", label: "Christmas" },
-  { value: "NYE", label: "NYE" },
-  { value: "SUMMER", label: "Summer" },
-  { value: "CITY", label: "City" },
-];
-
-const STATUS_OPTIONS: { value: TripStatus; label: string }[] = [
-  { value: "IDEA", label: "Idea" },
-  { value: "PLANNING", label: "Planning" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "HAPPENING", label: "Happening" },
-  { value: "DONE", label: "Done" },
-];
-
 interface MapPageProps {
   searchParams: Promise<{
-    season?: string;
-    status?: string;
     year?: string;
   }>;
 }
@@ -44,22 +23,14 @@ export default async function MapPage({ searchParams }: MapPageProps) {
   const { family } = await requireMember();
   const params = await searchParams;
 
-  const season = params.season as Season | undefined;
-  const status = params.status as TripStatus | undefined;
   const year = params.year;
 
   // Build filter
-  const where: Record<string, unknown> = {
+  const where: Prisma.TripWhereInput = {
     familyId: family.id,
     lat: { not: null },
     lng: { not: null },
   };
-  if (season && SEASON_OPTIONS.some((s) => s.value === season)) {
-    where.season = season;
-  }
-  if (status && STATUS_OPTIONS.some((s) => s.value === status)) {
-    where.status = status;
-  }
   if (year && /^\d{4}$/.test(year)) {
     const yr = parseInt(year, 10);
     where.startDate = {
@@ -73,9 +44,8 @@ export default async function MapPage({ searchParams }: MapPageProps) {
     include: {
       captain: { select: { name: true } },
       images: {
-        take: 1,
         orderBy: { sort: "asc" },
-        select: { storageKey: true },
+        select: { id: true, storageKey: true },
       },
       attendance: {
         where: { status: "IN" },
@@ -88,7 +58,6 @@ export default async function MapPage({ searchParams }: MapPageProps) {
   const mapTrips: MapTrip[] = trips
     .filter((t) => t.lat != null && t.lng != null)
     .map((t) => {
-      const coverKey = t.images[0]?.storageKey;
       const uniqueGoing = new Set(t.attendance.map((a) => a.memberId));
       return {
         id: t.id,
@@ -97,7 +66,7 @@ export default async function MapPage({ searchParams }: MapPageProps) {
         status: t.status,
         lat: t.lat!,
         lng: t.lng!,
-        coverUrl: coverKey && S3_BASE ? `${S3_BASE}/${coverKey}` : null,
+        coverUrl: imageUrl(tripCoverKey(t)),
         startDate: t.startDate?.toISOString() ?? null,
         endDate: t.endDate?.toISOString() ?? null,
         captainName: t.captain.name,
@@ -121,8 +90,6 @@ export default async function MapPage({ searchParams }: MapPageProps) {
 
   function buildFilterUrl(key: string, value: string | null) {
     const p = new URLSearchParams();
-    if (season) p.set("season", season);
-    if (status) p.set("status", status);
     if (year) p.set("year", year);
     if (value) {
       p.set(key, value);
@@ -187,32 +154,6 @@ export default async function MapPage({ searchParams }: MapPageProps) {
         >
           Map
         </h1>
-
-        <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", alignItems: "center" }}>
-          <span className="label-caps" style={{ marginRight: "var(--space-1)" }}>Season</span>
-          {SEASON_OPTIONS.map((s) => (
-            <Link
-              key={s.value}
-              href={buildFilterUrl("season", season === s.value ? null : s.value)}
-              style={season === s.value ? chipActive : chipInactive}
-            >
-              {s.label}
-            </Link>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", alignItems: "center" }}>
-          <span className="label-caps" style={{ marginRight: "var(--space-1)" }}>Status</span>
-          {STATUS_OPTIONS.map((s) => (
-            <Link
-              key={s.value}
-              href={buildFilterUrl("status", status === s.value ? null : s.value)}
-              style={status === s.value ? chipActive : chipInactive}
-            >
-              {s.label}
-            </Link>
-          ))}
-        </div>
 
         {years.length > 0 && (
           <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap", alignItems: "center" }}>

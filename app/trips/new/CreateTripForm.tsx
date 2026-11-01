@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { createTrip } from "./actions";
+import { uploadImage } from "@/lib/images";
 
 const SEASONS = [
   { value: "SNOW", label: "Snow" },
@@ -66,6 +68,11 @@ export function CreateTripForm() {
   const [coverImageKey, setCoverImageKey] = useState("");
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+  }, [coverPreview]);
 
   const [error, formAction, isPending] = useActionState(
     async (_prev: string | null, formData: FormData) => {
@@ -77,6 +84,7 @@ export function CreateTripForm() {
         await createTrip(formData);
         return null;
       } catch (e) {
+        unstable_rethrow(e);
         return e instanceof Error ? e.message : "Something went wrong";
       }
     },
@@ -88,37 +96,18 @@ export function CreateTripForm() {
     if (!file) return;
 
     setUploading(true);
+    setUploadError(null);
+    setCoverImageKey("");
+    setCoverPreview(null);
     try {
-      // Get presigned URL
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to get upload URL");
-      }
-
-      const { url, key } = (await res.json()) as { url: string; key: string };
-
-      // Upload directly to S3
-      await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
+      const key = await uploadImage(file, file.name);
       setCoverImageKey(key);
       setCoverPreview(URL.createObjectURL(file));
-    } catch {
-      // Silently handle — user can try again
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Photo upload failed.");
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   }
 
@@ -300,9 +289,11 @@ export function CreateTripForm() {
             id="coverFileInput"
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            disabled={uploading}
             style={{ display: "none" }}
             onChange={handleImageUpload}
           />
+          {uploadError && <p role="alert" style={{ color: "var(--danger)" }}>{uploadError}</p>}
         </div>
 
         <div style={{ marginBottom: "var(--space-4)" }}>
@@ -440,7 +431,7 @@ export function CreateTripForm() {
                 ...btnPrimary,
                 opacity: isPending ? 0.7 : 1,
               }}
-              disabled={isPending}
+              disabled={isPending || uploading}
             >
               {isPending ? "Creating..." : "Create trip"}
             </button>

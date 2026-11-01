@@ -11,6 +11,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ProfileActions } from "./ProfileActions";
 import { z } from "zod";
+import { MemberAvatar } from "@/components/MemberAvatar";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "My Profile" };
@@ -185,6 +186,7 @@ export default async function MePage() {
       }}
     >
       <section style={{ marginBottom: "var(--space-8)" }}>
+        <MemberAvatar name={fullMember.name} photoKey={fullMember.photoKey} size={72} />
         <h1
           style={{
             fontFamily: "var(--font-instrument)",

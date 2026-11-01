@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { TripCard } from "@/components/TripCard";
 import Link from "next/link";
 import type { Metadata } from "next";
-import type { Season, TripStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
+import { imageUrl, tripCoverKey } from "@/lib/images";
 
 export const dynamic = "force-dynamic";
 
@@ -11,32 +12,8 @@ export const metadata: Metadata = {
   title: "Trips",
 };
 
-const S3_BASE = process.env.NEXT_PUBLIC_S3_BASE_URL ?? "";
-
-const SEASON_OPTIONS: { value: Season; label: string }[] = [
-  { value: "SNOW", label: "Snow" },
-  { value: "SURF", label: "Surf" },
-  { value: "EASTER", label: "Easter" },
-  { value: "CHRISTMAS", label: "Christmas" },
-  { value: "NYE", label: "NYE" },
-  { value: "SUMMER", label: "Summer" },
-  { value: "CITY", label: "City" },
-  { value: "OTHER", label: "Other" },
-];
-
-const STATUS_OPTIONS: { value: TripStatus; label: string }[] = [
-  { value: "IDEA", label: "Idea" },
-  { value: "PLANNING", label: "Planning" },
-  { value: "CONFIRMED", label: "Confirmed" },
-  { value: "HAPPENING", label: "Happening" },
-  { value: "DONE", label: "Done" },
-  { value: "ARCHIVED", label: "Archived" },
-];
-
 interface TripsPageProps {
   searchParams: Promise<{
-    season?: string;
-    status?: string;
     year?: string;
     q?: string;
   }>;
@@ -46,18 +23,10 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
   const { family } = await requireMember();
   const params = await searchParams;
 
-  const season = params.season as Season | undefined;
-  const status = params.status as TripStatus | undefined;
   const year = params.year;
   const q = params.q ?? "";
 
-  const where: Record<string, unknown> = { familyId: family.id };
-  if (season && SEASON_OPTIONS.some((s) => s.value === season)) {
-    where.season = season;
-  }
-  if (status && STATUS_OPTIONS.some((s) => s.value === status)) {
-    where.status = status;
-  }
+  const where: Prisma.TripWhereInput = { familyId: family.id };
   if (year && /^\d{4}$/.test(year)) {
     const yr = parseInt(year, 10);
     where.startDate = {
@@ -74,10 +43,8 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
     include: {
       captain: { select: { name: true, photoKey: true } },
       images: {
-        where: { id: { not: undefined } },
-        take: 1,
         orderBy: { sort: "asc" },
-        select: { storageKey: true },
+        select: { id: true, storageKey: true },
       },
     },
     orderBy: { startDate: "desc" },
@@ -100,8 +67,6 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
   function buildFilterUrl(key: string, value: string | null) {
     const p = new URLSearchParams();
     if (q) p.set("q", q);
-    if (season) p.set("season", season);
-    if (status) p.set("status", status);
     if (year) p.set("year", year);
     if (value) {
       p.set(key, value);
@@ -200,8 +165,6 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
         method="get"
         style={{ marginBottom: "var(--space-4)" }}
       >
-        {season && <input type="hidden" name="season" value={season} />}
-        {status && <input type="hidden" name="status" value={status} />}
         <input
           name="q"
           type="text"
@@ -223,49 +186,6 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
         />
       </form>
 
-      {/* Filters */}
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          marginBottom: "var(--space-2)",
-        }}
-      >
-        <span className="label-caps" style={{ marginRight: "var(--space-1)", alignSelf: "center" }}>
-          Season
-        </span>
-        {SEASON_OPTIONS.map((s) => (
-          <Link
-            key={s.value}
-            href={buildFilterUrl("season", season === s.value ? null : s.value)}
-            style={season === s.value ? chipActive : chipInactive}
-          >
-            {s.label}
-          </Link>
-        ))}
-      </div>
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          flexWrap: "wrap",
-          marginBottom: "var(--space-2)",
-        }}
-      >
-        <span className="label-caps" style={{ marginRight: "var(--space-1)", alignSelf: "center" }}>
-          Status
-        </span>
-        {STATUS_OPTIONS.map((s) => (
-          <Link
-            key={s.value}
-            href={buildFilterUrl("status", status === s.value ? null : s.value)}
-            style={status === s.value ? chipActive : chipInactive}
-          >
-            {s.label}
-          </Link>
-        ))}
-      </div>
       {years.length > 0 && (
         <div
           style={{
@@ -347,8 +267,7 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
           }}
         >
           {trips.map((trip) => {
-            const coverKey = trip.images[0]?.storageKey;
-            const coverUrl = coverKey && S3_BASE ? `${S3_BASE}/${coverKey}` : null;
+            const coverUrl = imageUrl(tripCoverKey(trip));
 
             return (
               <TripCard

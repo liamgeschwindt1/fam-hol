@@ -6,7 +6,9 @@ import {
   linkEmailAccount,
   regenerateCalendarToken,
   setCalendarCostVisibility,
+  updateProfilePhoto,
 } from "./actions";
+import { PhotoCropper } from "@/components/PhotoCropper";
 import { MoneyError, useMoneyAction } from "../trips/[id]/MoneyForms";
 
 export function ProfileActions({
@@ -29,6 +31,11 @@ export function ProfileActions({
         gap: "var(--space-8)",
       }}
     >
+      <section>
+        <h3 style={{ fontSize: "var(--text-sm)", marginBottom: "var(--space-3)" }}>Your photo</h3>
+        <p style={{ color: "var(--text-soft)" }}>Your emoji is automatic. Add a photo if you prefer.</p>
+        <PhotoCropper onUploaded={updateProfilePhoto} />
+      </section>
       <ChangePinForm />
       <EmailAccountSection accountEmail={accountEmail} />
       <CalendarTokenSection calendarToken={calendarToken} />
