@@ -18,29 +18,29 @@ export default async function AdminPage() {
   const host = headerStore.get("host") ?? "localhost:3000";
   const proto = process.env.NODE_ENV === "production" ? "https" : "http";
 
-  const [members, households, deviceRequests] = await Promise.all([
-    db.member.findMany({
-      where: { familyId: family.id },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        name: true,
-        photoKey: true,
-        isAdmin: true,
-        isDependent: true,
-        household: { select: { id: true, name: true } },
-      },
-    }),
-    db.household.findMany({
-      where: { familyId: family.id },
-      orderBy: { name: "asc" },
-    }),
-    db.deviceRequest.findMany({
-      where: { status: "PENDING", member: { familyId: family.id } },
-      include: { member: { select: { id: true, name: true, photoKey: true } } },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const members = await db.member.findMany({
+    where: { familyId: family.id },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      name: true,
+      photoKey: true,
+      isAdmin: true,
+      isDependent: true,
+      household: { select: { id: true, name: true } },
+    },
+  });
+
+  const households = await db.household.findMany({
+    where: { familyId: family.id },
+    orderBy: { name: "asc" },
+  });
+
+  const deviceRequests = await db.deviceRequest.findMany({
+    where: { status: "PENDING", member: { familyId: family.id } },
+    include: { member: { select: { id: true, name: true, photoKey: true } } },
+    orderBy: { createdAt: "asc" },
+  });
 
   // Build invite URL from raw token (we only store hash, so generate fresh URL for display)
   // Actually, we store the hash. The admin needs to regenerate to get a new URL.

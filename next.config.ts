@@ -22,9 +22,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [],
   },
 
-  experimental: {
-    typedRoutes: false,
-  },
+  typedRoutes: false,
 };
 
 export default nextConfig;

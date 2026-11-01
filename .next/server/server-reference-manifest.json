@@ -1,28 +1,5 @@
 {
-  "node": {
-    "6057b264df1e406c8df2ef29565f376aab01b5d281": {
-      "workers": {
-        "app/welcome-back/page": {
-          "moduleId": "(action-browser)/./node_modules/.pnpm/next@15.1.7_@babel+core@7.29.7_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fworkspaces%2Ffam-hol%2Fapp%2Fwelcome-back%2Factions.ts%22%2C%5B%5B%226057b264df1e406c8df2ef29565f376aab01b5d281%22%2C%22loginWithPin%22%5D%2C%5B%22609a8dcd03c018e24b45f515e192e4851cd717c6ac%22%2C%22requestAdminApproval%22%5D%5D%5D%5D&__client_imported__=true!",
-          "async": false
-        }
-      },
-      "layer": {
-        "app/welcome-back/page": "action-browser"
-      }
-    },
-    "609a8dcd03c018e24b45f515e192e4851cd717c6ac": {
-      "workers": {
-        "app/welcome-back/page": {
-          "moduleId": "(action-browser)/./node_modules/.pnpm/next@15.1.7_@babel+core@7.29.7_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22%2Fworkspaces%2Ffam-hol%2Fapp%2Fwelcome-back%2Factions.ts%22%2C%5B%5B%226057b264df1e406c8df2ef29565f376aab01b5d281%22%2C%22loginWithPin%22%5D%2C%5B%22609a8dcd03c018e24b45f515e192e4851cd717c6ac%22%2C%22requestAdminApproval%22%5D%5D%5D%5D&__client_imported__=true!",
-          "async": false
-        }
-      },
-      "layer": {
-        "app/welcome-back/page": "action-browser"
-      }
-    }
-  },
+  "node": {},
   "edge": {},
-  "encryptionKey": "xQxLV+A0ngXZEiex+JdM6WiH41cR0EDA3t1VnjuNWzg="
+  "encryptionKey": "mkJ708OMm5NP3y9rU5iPF6zdvK5wS0WyxvRQZ1puY8g="
 }
