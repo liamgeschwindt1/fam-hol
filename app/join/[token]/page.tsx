@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { hashToken } from "@/lib/auth";
+import { getCurrentSession, hashToken } from "@/lib/auth";
 import JoinForm from "./JoinForm";
 
 export const dynamic = "force-dynamic";
@@ -11,14 +11,25 @@ interface Props {
 
 export default async function JoinPage({ params }: Props) {
   const { token } = await params;
+  const session = await getCurrentSession();
 
   const tokenHash = hashToken(token);
-  const family = await db.family.findFirst({
-    where: { inviteTokenHash: tokenHash },
-    include: {
-      households: { orderBy: { name: "asc" } },
-    },
-  });
+  const [linkFamily, emailInvite] = await Promise.all([
+    db.family.findFirst({
+      where: { inviteTokenHash: tokenHash },
+      include: { households: { orderBy: { name: "asc" } } },
+    }),
+    db.groupInvitation.findUnique({
+      where: { tokenHash },
+      include: { family: { include: { households: { orderBy: { name: "asc" } } } } },
+    }),
+  ]);
+  const inviteIsValid =
+    emailInvite &&
+    !emailInvite.acceptedAt &&
+    emailInvite.expiresAt > new Date();
+  const family = inviteIsValid ? emailInvite.family : linkFamily;
+  const invitedEmail = inviteIsValid ? emailInvite.email : null;
 
   if (!family) {
     return (
@@ -93,6 +104,8 @@ export default async function JoinPage({ params }: Props) {
 
         <JoinForm
           token={token}
+          invitedEmail={invitedEmail}
+          accountEmail={session?.member.userAccount?.email ?? null}
           households={family.households.map((h) => ({
             id: h.id,
             name: h.name,

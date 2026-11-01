@@ -105,6 +105,7 @@ export default async function MePage() {
   const fullMember = await db.member.findFirstOrThrow({
     where: { id: member.id, familyId: family.id },
     include: {
+      userAccount: true,
       household: true,
       dependents: { select: { id: true, name: true } },
     },
@@ -300,6 +301,7 @@ export default async function MePage() {
         <ProfileActions
           calendarToken={fullMember.calendarToken}
           calendarShowCosts={fullMember.calendarShowCosts}
+          accountEmail={fullMember.userAccount?.email ?? null}
         />
       </section>
     </div>

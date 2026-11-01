@@ -21,8 +21,8 @@ export interface AgendaTrip {
   title: string;
   season: Season;
   status: TripStatus;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   goingCount: number;
   memberStatus: "IN" | "MAYBE" | null;
 }
@@ -31,7 +31,8 @@ interface CalendarAgendaProps {
   trips: AgendaTrip[];
 }
 
-function formatDateRange(start: string, end: string): string {
+function formatDateRange(start: string | null, end: string | null): string {
+  if (!start || !end) return "Dates to be decided";
   const s = new Date(start);
   const e = new Date(end);
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
@@ -43,7 +44,8 @@ function formatDateRange(start: string, end: string): string {
   return `${startStr} – ${endStr}`;
 }
 
-function daysUntil(dateStr: string): string {
+function daysUntil(dateStr: string | null): string {
+  if (!dateStr) return "Date not set";
   const now = new Date();
   const d = new Date(dateStr);
   const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -54,10 +56,15 @@ function daysUntil(dateStr: string): string {
 }
 
 export function CalendarAgenda({ trips }: CalendarAgendaProps) {
-  const sorted = [...trips].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  const sorted = [...trips].sort((a, b) => {
+    if (!a.startDate) return 1;
+    if (!b.startDate) return -1;
+    return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+  });
   const now = new Date();
-  const upcoming = sorted.filter((t) => new Date(t.endDate) >= now);
-  const past = sorted.filter((t) => new Date(t.endDate) < now).reverse();
+  const undated = sorted.filter((trip) => !trip.startDate || !trip.endDate);
+  const upcoming = sorted.filter((t) => t.endDate && new Date(t.endDate) >= now);
+  const past = sorted.filter((t) => t.endDate && new Date(t.endDate) < now).reverse();
 
   return (
     <div>
@@ -82,6 +89,27 @@ export function CalendarAgenda({ trips }: CalendarAgendaProps) {
           <AgendaItem key={trip.id} trip={trip} />
         ))}
       </div>
+
+      {undated.length > 0 && (
+        <>
+          <h2
+            style={{
+              fontFamily: "var(--font-instrument)",
+              fontSize: "var(--text-2xl)",
+              fontWeight: 400,
+              margin: "var(--space-8) 0 var(--space-4) 0",
+              color: "var(--ink)",
+            }}
+          >
+            Dates to be decided
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {undated.map((trip) => (
+              <AgendaItem key={trip.id} trip={trip} />
+            ))}
+          </div>
+        </>
+      )}
 
       {past.length > 0 && (
         <>

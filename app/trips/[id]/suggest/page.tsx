@@ -39,6 +39,17 @@ export default async function SuggestPage({ params }: PageProps) {
   if (!trip || trip.familyId !== family.id) {
     notFound();
   }
+  if (!trip.startDate || !trip.endDate) {
+    return (
+      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "var(--space-6)" }}>
+        <Link href={`/trips/${trip.id}`}>&larr; Back to trip</Link>
+        <h1 className="font-display">Add dates before suggesting schedule changes</h1>
+        <p style={{ color: "var(--text-soft)" }}>
+          This trip can stay undated while you plan. Set both trip dates when you&apos;re ready to suggest calendar changes.
+        </p>
+      </div>
+    );
+  }
 
   const tripData = {
     id: trip.id,

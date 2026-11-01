@@ -7,7 +7,7 @@ A private family trip planner built with Next.js, PostgreSQL and Prisma.
 Use Node 22 and pnpm 9.
 
 1. Copy `.env.example` to `.env` and configure a development PostgreSQL database.
-2. Set `APP_URL` to the application's origin. Configure the S3 variables to enable images and payment screenshots.
+2. Set `APP_URL` to the application's origin. Set `RESEND_API_KEY` and a verified `EMAIL_FROM` address to send group invitations. Configure the S3 variables to enable images and payment screenshots.
 3. Run:
 
    ```sh
@@ -17,9 +17,9 @@ Use Node 22 and pnpm 9.
    pnpm dev
    ```
 
-4. Open the app to create the family and your admin profile. On a fresh database, visitors without a session are automatically sent to `/setup`; you can also open that address directly. Once a family exists, returning visitors see the member sign-in screen.
+4. Open the app to create your account and first group. On a fresh database, visitors without a session are automatically sent to `/setup`; you can also open that address directly. Returning visitors can sign in with email and PIN, create additional groups, and switch between them.
 
-After creation, the admin lands on `/admin` to generate an invite link and manage members. The home dashboard shows **Manage family & invite people** to admins, not a first-time setup link. Opening `/setup` again sends signed-in admins to family management, other members to trips, and signed-out visitors to sign-in.
+Group members can invite others by email or share an invitation link. Trips can be created without dates; dates are required only when confirming a trip. Trip creators can invite group members and members can RSVP.
 
 For Railway, provision PostgreSQL and an S3-compatible bucket, configure the variables in `.env.example`, and deploy using `railway.json`.
 
@@ -29,7 +29,7 @@ Set Railway's `NODE_ENV` to exactly `production` (lowercase, without quotes or s
 
 ### Existing databases
 
-The repository now includes an initial migration and two M6 migrations. A fresh database can apply all three normally.
+The repository includes an initial migration, two M6 migrations and an accounts/groups migration. A fresh database can apply all four normally.
 
 If an existing database was created with `prisma db push`, **back it up and verify that its schema matches the initial migration** before marking the initial migration as applied:
 
@@ -38,7 +38,7 @@ pnpm exec prisma migrate resolve --applied 20260101000000_initial
 pnpm db:migrate:deploy
 ```
 
-Do not baseline an empty or mismatched database. The M6 migration adds payment instructions, identifies accommodation categories, and removes scoped adjustments when their cost line or category is deleted.
+Do not baseline an empty or mismatched database. The M6 migrations add payment instructions, identify accommodation categories, and remove scoped adjustments when their cost line or category is deleted. The accounts/groups migration adds email accounts, group invitations, trip participation and optional trip dates. Existing profile-only members can link an email from their profile; this preserves their existing group membership.
 
 ## M6: costs and commitments
 

@@ -102,8 +102,8 @@ async function mutateCosts(
             season: updatedTrip.season,
             status: updatedTrip.status,
             currency: updatedTrip.currency,
-            startDate: updatedTrip.startDate.toISOString(),
-            endDate: updatedTrip.endDate.toISOString(),
+            startDate: updatedTrip.startDate?.toISOString() ?? null,
+            endDate: updatedTrip.endDate?.toISOString() ?? null,
             fxRatesJson: updatedTrip.fxRatesJson,
             ageWeightsJson: updatedTrip.ageWeightsJson,
             costs: {

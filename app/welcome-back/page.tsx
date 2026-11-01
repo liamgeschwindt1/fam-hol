@@ -1,13 +1,15 @@
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import MemberGrid from "./MemberGrid";
+import { EmailLogin } from "./EmailLogin";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Who are you?" };
 
 export default async function WelcomeBackPage() {
   const family = await db.family.findFirst({
-    select: { name: true },
+    select: { id: true, name: true },
   });
 
   if (!family) {
@@ -15,13 +17,14 @@ export default async function WelcomeBackPage() {
   }
 
   const members = await db.member.findMany({
-    where: { isDependent: false },
+    where: { familyId: family.id, isDependent: false },
     orderBy: { name: "asc" },
     select: {
       id: true,
       name: true,
       photoKey: true,
       pinHash: true,
+      userAccountId: true,
     },
   });
 
@@ -56,13 +59,18 @@ export default async function WelcomeBackPage() {
           Who are you?
         </h1>
 
-        {members.length === 0 ? (
+        <EmailLogin />
+        <p style={{ color: "var(--text-soft)", textAlign: "center" }}>
+          New here? <Link href="/setup">Create a group</Link>
+        </p>
+
+        {members.filter((m) => !m.userAccountId).length === 0 ? (
           <p style={{ color: "var(--text-soft)", textAlign: "center" }}>
-            No members yet. Ask your admin for an invite link.
+            No legacy profiles. Sign in above or use a group invitation link.
           </p>
         ) : (
           <MemberGrid
-            members={members.map((m) => ({
+            members={members.filter((m) => !m.userAccountId).map((m) => ({
               id: m.id,
               name: m.name,
               photoKey: m.photoKey,

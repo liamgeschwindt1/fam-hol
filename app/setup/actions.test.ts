@@ -2,24 +2,26 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { setupFamily } from "./actions";
 
 const mocks = vi.hoisted(() => ({
-  family: vi.fn(),
+  getCurrentSession: vi.fn(),
+  findAccount: vi.fn(),
+  createAccount: vi.fn(),
   createFamily: vi.fn(),
   createMember: vi.fn(),
   transaction: vi.fn(),
-  requireMember: vi.fn(),
   createSession: vi.fn(),
   setSessionCookie: vi.fn(),
   redirect: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({
   db: {
-    family: { findFirst: mocks.family, create: mocks.createFamily },
+    userAccount: { findUnique: mocks.findAccount, create: mocks.createAccount },
+    family: { create: mocks.createFamily },
     member: { create: mocks.createMember },
     $transaction: mocks.transaction,
   },
 }));
 vi.mock("@/lib/auth", () => ({
-  requireMember: mocks.requireMember,
+  getCurrentSession: mocks.getCurrentSession,
   hashToken: () => "hashed-token",
   createSession: mocks.createSession,
   setSessionCookie: mocks.setSessionCookie,
@@ -28,7 +30,9 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.family.mockResolvedValue(null);
+  mocks.findAccount.mockResolvedValue(null);
+  mocks.getCurrentSession.mockResolvedValue(null);
+  mocks.transaction.mockResolvedValue([]);
   mocks.createSession.mockResolvedValue("session-token");
   mocks.redirect.mockImplementation((path: string) => {
     throw new Error(`Redirect: ${path}`);
@@ -39,14 +43,16 @@ function setupData() {
   const data = new FormData();
   data.set("familyName", " The Explorers ");
   data.set("adminName", " Alex ");
+  data.set("email", "alex@example.com");
+  data.set("pin", "569156");
   data.set("homeCurrency", "GBP");
   data.set("secondCurrency", "");
   data.set("photoKey", "");
   return data;
 }
 
-it("accepts no second currency or photo and takes the new admin to invitations", async () => {
-  await expect(setupFamily({}, setupData())).rejects.toThrow("Redirect: /admin");
+it("creates a group and account without optional currency or photo", async () => {
+  await expect(setupFamily({}, setupData())).rejects.toThrow("Redirect: /");
   expect(mocks.createFamily).toHaveBeenCalledWith({
     data: expect.objectContaining({ name: "The Explorers", secondCurrency: null }),
   });
@@ -66,14 +72,9 @@ it("rejects whitespace-only names before writing", async () => {
   expect(mocks.transaction).not.toHaveBeenCalled();
 });
 
-it.each([
-  [true, "/admin"],
-  [false, "/trips"],
-])("does not recreate an existing family for admin status %s", async (isAdmin, path) => {
-  mocks.family.mockResolvedValue({ id: "family" });
-  mocks.requireMember.mockResolvedValue({ member: { isAdmin } });
-  await expect(setupFamily({}, setupData())).rejects.toThrow(`Redirect: ${path}`);
-  expect(mocks.transaction).not.toHaveBeenCalled();
+it("allows creating another group even when other groups already exist", async () => {
+  await expect(setupFamily({}, setupData())).rejects.toThrow("Redirect: /");
+  expect(mocks.transaction).toHaveBeenCalledOnce();
 });
 
 it("does not create a session when the database transaction fails", async () => {

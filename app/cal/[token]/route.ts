@@ -91,6 +91,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   for (const trip of allTrips) {
+    if (!trip.startDate || !trip.endDate) continue;
     const lastModified =
       trip.updatedAt > member.updatedAt ? trip.updatedAt : member.updatedAt;
     const sequence = trip.revision + member.calendarRevision;

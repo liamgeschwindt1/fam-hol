@@ -214,29 +214,30 @@ export function CreateTripForm() {
         >
           <div>
             <label style={labelStyle} htmlFor="startDate">
-              Start date
+              Start date <span style={{ textTransform: "none" }}>(optional)</span>
             </label>
             <input
               id="startDate"
               name="startDate"
               type="date"
-              required
               style={inputStyle}
             />
           </div>
           <div>
             <label style={labelStyle} htmlFor="endDate">
-              End date
+              End date <span style={{ textTransform: "none" }}>(optional)</span>
             </label>
             <input
               id="endDate"
               name="endDate"
               type="date"
-              required
               style={inputStyle}
             />
           </div>
         </div>
+        <p style={{ color: "var(--text-soft)", fontSize: "var(--text-xs)", margin: "-8px 0 var(--space-4)" }}>
+          Leave both dates blank if they are not decided yet.
+        </p>
       </div>
 
       {/* Step 2: Photos & Description */}

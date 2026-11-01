@@ -13,12 +13,13 @@ interface TripCardProps {
   coverUrl: string | null;
   season: Season;
   status: TripStatus;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   captain: { name: string; photoKey: string | null };
 }
 
-function formatDateRange(start: string, end: string): string {
+function formatDateRange(start: string | null, end: string | null): string {
+  if (!start || !end) return "Dates to be decided";
   const s = new Date(start);
   const e = new Date(end);
   const opts: Intl.DateTimeFormatOptions = {

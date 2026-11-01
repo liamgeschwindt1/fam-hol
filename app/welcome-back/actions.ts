@@ -13,6 +13,52 @@ export type LoginState = {
   memberId?: string;
 };
 
+export async function loginWithEmailAndPin(
+  _prev: LoginState,
+  formData: FormData,
+): Promise<LoginState> {
+  const rawEmail = formData.get("email");
+  const pin = formData.get("pin");
+  if (typeof rawEmail !== "string" || typeof pin !== "string") {
+    return { error: "Enter your email and PIN." };
+  }
+  const email = rawEmail.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{4,8}$/.test(pin)) {
+    return { error: "Enter a valid email address and a 4–8 digit PIN." };
+  }
+
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`email-pin:${email}:${ip}`, 5, 15 * 60 * 1000)) {
+    return { error: "Too many attempts. Please wait 15 minutes." };
+  }
+
+  const account = await db.userAccount.findUnique({
+    where: { email },
+    include: {
+      members: {
+        where: { isDependent: false },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+  if (!account || hashToken(pin) !== account.pinHash) {
+    return { error: "Email or PIN is incorrect." };
+  }
+  const member = account.members[0];
+  if (!member) {
+    return { error: "This account is not part of a group yet. Use an invitation link to join." };
+  }
+
+  const rawToken = await createSession(
+    member.id,
+    headerStore.get("user-agent") ?? undefined,
+  );
+  await setSessionCookie(rawToken);
+  redirect("/");
+}
+
 export async function loginWithPin(
   _prev: LoginState,
   formData: FormData,
@@ -39,6 +85,9 @@ export async function loginWithPin(
 
   if (!member) {
     return { error: "Member not found." };
+  }
+  if (member.userAccountId) {
+    return { error: "Use your email and account PIN to sign in." };
   }
 
   if (!member.pinHash) {

@@ -11,18 +11,19 @@ interface Household {
 
 interface JoinFormProps {
   token: string;
+  invitedEmail: string | null;
+  accountEmail: string | null;
   households: Household[];
 }
 
 const initialState: JoinState = {};
 
-export default function JoinForm({ token, households }: JoinFormProps) {
+export default function JoinForm({ token, invitedEmail, accountEmail, households }: JoinFormProps) {
   const [state, action, pending] = useActionState(joinFamily, initialState);
   const [photoKey, setPhotoKey] = useState("");
   const [householdValue, setHouseholdValue] = useState(
     households[0]?.id ?? "new",
   );
-  const [showPin, setShowPin] = useState(false);
   const photoKeyRef = useRef<HTMLInputElement>(null);
 
   function handlePhotoUploaded(key: string) {
@@ -70,6 +71,22 @@ export default function JoinForm({ token, households }: JoinFormProps) {
         )}
       </div>
 
+      <div>
+        <label htmlFor="email" style={labelStyle}>Email account</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          readOnly={!!invitedEmail || !!accountEmail}
+          defaultValue={invitedEmail ?? accountEmail ?? ""}
+          placeholder="you@example.com"
+          autoComplete="email"
+          style={inputStyle}
+        />
+        {state.errors?.email && <p style={errorStyle}>{state.errors.email[0]}</p>}
+      </div>
+
       {/* Photo */}
       <div>
         <span style={labelStyle}>Photo</span>
@@ -110,63 +127,26 @@ export default function JoinForm({ token, households }: JoinFormProps) {
         )}
       </div>
 
-      {/* PIN (optional) */}
-      <div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-3)",
-            marginBottom: showPin ? "var(--space-3)" : 0,
-          }}
-        >
-          <span style={labelStyle}>PIN (optional)</span>
-          <button
-            type="button"
-            onClick={() => setShowPin((v) => !v)}
-            style={{
-              fontSize: "var(--text-xs)",
-              color: "var(--sea)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              textDecoration: "underline",
-              marginBottom: "0.5rem",
-            }}
-          >
-            {showPin ? "Remove" : "Add PIN"}
-          </button>
-        </div>
-
-        {showPin && (
-          <div>
-            <input
-              id="pin"
-              name="pin"
-              type="password"
-              inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
-              placeholder="4-digit PIN"
-              style={{ ...inputStyle, fontFamily: "var(--font-dm-mono)", letterSpacing: "0.3em" }}
-              autoComplete="new-password"
-            />
-            <p
-              style={{
-                fontSize: "var(--text-xs)",
-                color: "var(--text-soft)",
-                marginTop: "var(--space-1)",
-              }}
-            >
-              If you skip this, an admin will need to approve each new device.
-            </p>
-            {state.errors?.pin && (
-              <p style={errorStyle}>{state.errors.pin[0]}</p>
-            )}
-          </div>
-        )}
-      </div>
+      {!accountEmail && <div>
+        <label htmlFor="pin" style={labelStyle}>Account PIN (4–8 digits)</label>
+        <input
+          id="pin"
+          name="pin"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]{4,8}"
+          minLength={4}
+          maxLength={8}
+          required
+          placeholder="4–8 digits"
+          style={{ ...inputStyle, fontFamily: "var(--font-dm-mono)", letterSpacing: "0.3em" }}
+          autoComplete="new-password"
+        />
+        <p style={{ fontSize: "var(--text-xs)", color: "var(--text-soft)", marginTop: "var(--space-1)" }}>
+          If this email already has an account, enter its PIN to join this group.
+        </p>
+        {state.errors?.pin && <p style={errorStyle}>{state.errors.pin[0]}</p>}
+      </div>}
 
       <button type="submit" disabled={pending} style={buttonStyle(pending)}>
         {pending ? "Joining…" : "Join the family"}

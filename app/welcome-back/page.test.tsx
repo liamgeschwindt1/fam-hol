@@ -34,7 +34,7 @@ describe("first-time entry", () => {
   });
 
   it("keeps the member picker for an existing family", async () => {
-    mocks.findFamily.mockResolvedValue({ name: "Test family" });
+    mocks.findFamily.mockResolvedValue({ id: "family", name: "Test family" });
     mocks.findMembers.mockResolvedValue([
       { id: "member", name: "Admin", photoKey: null, pinHash: null },
     ]);
@@ -47,11 +47,11 @@ describe("first-time entry", () => {
   });
 
   it("keeps the existing empty-member message without reopening setup", async () => {
-    mocks.findFamily.mockResolvedValue({ name: "Test family" });
+    mocks.findFamily.mockResolvedValue({ id: "family", name: "Test family" });
     mocks.findMembers.mockResolvedValue([]);
 
     const html = renderToStaticMarkup(await WelcomeBackPage());
-    expect(html).toContain("No members yet. Ask your admin for an invite link.");
+    expect(html).toContain("No legacy profiles. Sign in above or use a group invitation link.");
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 

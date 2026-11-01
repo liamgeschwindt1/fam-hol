@@ -32,12 +32,11 @@ export interface CostLine {
   applyAgeWeights: boolean;
   mealsPerDay?: number;
 }
-
 export interface EngineInput {
   trip: {
     id: string;
-    startDate: string;
-    endDate: string;
+    startDate: string | null;
+    endDate: string | null;
     currency: string;
     fxRates: Record<string, number>;
   };
@@ -46,6 +45,10 @@ export interface EngineInput {
     householdId: string | null;
     ageBand: AgeBand;
     guardianId?: string;
+  }[];
+  participants?: {
+    memberId: string;
+    status: "IN" | "MAYBE" | "OUT";
   }[];
   attendance: {
     memberId: string;
@@ -97,9 +100,19 @@ export interface EngineOutput {
 
 export function calculateCosts(input: EngineInput): EngineOutput {
   const { trip, lines, ageWeights, adjustments } = input;
+  const invitedMemberIds = new Set(
+    (input.participants ?? [])
+      .filter(
+        (participant) =>
+          participant.status === "IN" ||
+          (input.includeMaybe && participant.status === "MAYBE"),
+      )
+      .map((participant) => participant.memberId),
+  );
   const warnings: string[] = [];
   const dates = new Map(input.members.map((m) => [m.id, new Set<string>()]));
   for (const attendance of input.attendance) {
+    if (!trip.startDate || !trip.endDate) continue;
     if (attendance.date < trip.startDate || attendance.date > trip.endDate)
       continue;
     if (
@@ -124,6 +137,20 @@ export function calculateCosts(input: EngineInput): EngineOutput {
 
   for (const line of lines) {
     if (line.amountMinor < 0) throw new Error("Cost lines cannot be negative");
+    if (
+      (!trip.startDate || !trip.endDate) &&
+      [
+        "PER_PERSON_PER_NIGHT",
+        "PER_ROOM_PER_NIGHT",
+        "SHARED_BY_PERSON_NIGHTS",
+        "PER_PERSON_PER_DAY_FOOD",
+      ].includes(line.basis)
+    ) {
+      warnings.push(
+        `Line "${line.label}" (${line.id}): add trip dates to calculate date-based costs`,
+      );
+      continue;
+    }
     const price = currencyAmount(
       line.amountMinor,
       line.currency,
@@ -134,7 +161,7 @@ export function calculateCosts(input: EngineInput): EngineOutput {
       input.accommodationCategoryIds?.includes(line.categoryId) ?? false;
     const eligible = input.members.filter(
       (m) =>
-        dates.get(m.id)!.size > 0 &&
+        (dates.get(m.id)!.size > 0 || invitedMemberIds.has(m.id)) &&
         !(
           accommodation &&
           m.householdId !== null &&

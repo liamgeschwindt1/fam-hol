@@ -30,6 +30,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
   if (!trip || trip.familyId !== family.id) {
     return new NextResponse("Not found", { status: 404 });
   }
+  if (!trip.startDate || !trip.endDate) {
+    return new NextResponse("Add trip dates before downloading its calendar event.", {
+      status: 409,
+    });
+  }
 
   const cal = ical({
     name: trip.title,

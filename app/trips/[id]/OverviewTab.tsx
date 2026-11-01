@@ -13,8 +13,8 @@ interface ActivityEntry {
 
 interface OverviewTabProps {
   description: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: Date | null;
+  endDate: Date | null;
   status: TripStatus;
   captain: { name: string; photoKey: string | null };
   activities: ActivityEntry[];
@@ -82,7 +82,8 @@ export function OverviewTab({
   captain,
   activities,
 }: OverviewTabProps) {
-  const nights = daysBetween(startDate, endDate);
+  const nights =
+    startDate && endDate ? daysBetween(startDate, endDate) : null;
 
   return (
     <div
@@ -116,7 +117,7 @@ export function OverviewTab({
               From
             </span>
             <span style={{ fontSize: "var(--text-base)" }}>
-              {formatDate(startDate)}
+              {startDate ? formatDate(startDate) : "Not set"}
             </span>
           </div>
           <div>
@@ -131,7 +132,7 @@ export function OverviewTab({
               To
             </span>
             <span style={{ fontSize: "var(--text-base)" }}>
-              {formatDate(endDate)}
+              {endDate ? formatDate(endDate) : "Not set"}
             </span>
           </div>
           <div>
@@ -151,7 +152,7 @@ export function OverviewTab({
                 fontSize: "var(--text-base)",
               }}
             >
-              {nights}
+              {nights ?? "—"}
             </span>
           </div>
         </div>

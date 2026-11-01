@@ -102,8 +102,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     id: t.id,
     title: t.title,
     season: t.season,
-    startDate: t.startDate.toISOString(),
-    endDate: t.endDate.toISOString(),
+    startDate: t.startDate?.toISOString() ?? null,
+    endDate: t.endDate?.toISOString() ?? null,
     memberStatus: attendanceMap.get(t.id) ?? null,
   }));
 
@@ -112,8 +112,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     title: t.title,
     season: t.season,
     status: t.status,
-    startDate: t.startDate.toISOString(),
-    endDate: t.endDate.toISOString(),
+    startDate: t.startDate?.toISOString() ?? null,
+    endDate: t.endDate?.toISOString() ?? null,
     goingCount: goingCountMap.get(t.id) ?? 0,
     memberStatus: attendanceMap.get(t.id) ?? null,
   }));
@@ -122,8 +122,8 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     id: t.id,
     title: t.title,
     season: t.season,
-    startDate: t.startDate.toISOString(),
-    endDate: t.endDate.toISOString(),
+    startDate: t.startDate?.toISOString() ?? null,
+    endDate: t.endDate?.toISOString() ?? null,
   }));
 
   function viewUrl(v: string) {

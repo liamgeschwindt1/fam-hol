@@ -64,7 +64,7 @@ export async function computeCosts(
     },
   });
 
-  const [members, attendance, categories, rooms, adjustments, ownStays] =
+  const [members, attendance, participants, categories, rooms, adjustments, ownStays] =
     await Promise.all([
       client.member.findMany({
         where: { familyId: trip.familyId },
@@ -81,6 +81,11 @@ export async function computeCosts(
         where: { tripId },
         orderBy: [{ memberId: "asc" }, { date: "asc" }],
         select: { memberId: true, date: true, status: true },
+      }),
+
+      client.tripParticipant.findMany({
+        where: { tripId },
+        select: { memberId: true, status: true },
       }),
 
       client.costCategory.findMany({
@@ -141,8 +146,8 @@ export async function computeCosts(
   const engineInput: EngineInput = {
     trip: {
       id: trip.id,
-      startDate: trip.startDate.toISOString().split("T")[0]!,
-      endDate: trip.endDate.toISOString().split("T")[0]!,
+      startDate: trip.startDate?.toISOString().split("T")[0] ?? null,
+      endDate: trip.endDate?.toISOString().split("T")[0] ?? null,
       currency: trip.currency,
       fxRates,
     },
@@ -156,6 +161,10 @@ export async function computeCosts(
       memberId: a.memberId,
       date: a.date.toISOString().split("T")[0]!,
       status: a.status,
+    })),
+    participants: participants.map((participant) => ({
+      memberId: participant.memberId,
+      status: participant.status,
     })),
     lines,
     rooms: rooms.map((r) => ({

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   trip: { findUniqueOrThrow: vi.fn() },
   member: { findMany: vi.fn() },
   attendance: { findMany: vi.fn() },
+  tripParticipant: { findMany: vi.fn() },
   costCategory: { findMany: vi.fn() },
   room: { findMany: vi.fn() },
   costAdjustment: { findMany: vi.fn() },
@@ -40,6 +41,7 @@ beforeEach(() => {
     { memberId: "adult", date: new Date("2026-11-01"), status: "IN" },
     { memberId: "child", date: new Date("2026-11-01"), status: "MAYBE" },
   ]);
+  mocks.tripParticipant.findMany.mockResolvedValue([]);
   mocks.costCategory.findMany.mockResolvedValue([
     {
       id: "stay",

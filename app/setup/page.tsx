@@ -1,17 +1,13 @@
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
-import { requireMember } from "@/lib/auth";
+import { getCurrentSession } from "@/lib/auth";
 import SetupForm from "./SetupForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Set up your family space" };
 
 export default async function SetupPage() {
-  const existing = await db.family.findFirst();
-  if (existing) {
-    const { member } = await requireMember();
-    redirect(member.isAdmin ? "/admin" : "/trips");
-  }
+  const session = await getCurrentSession();
+  if (session) redirect(session.member.userAccountId ? "/groups/new" : "/me");
 
   return (
     <div className="setup-shell">

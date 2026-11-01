@@ -20,13 +20,14 @@ interface ProgramItem {
 
 interface ProgramTabProps {
   tripId: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   items: ProgramItem[];
   isCaptain: boolean;
 }
 
-function getDays(start: string, end: string): string[] {
+function getDays(start: string | null, end: string | null): string[] {
+  if (!start || !end) return [];
   const days: string[] = [];
   const s = new Date(start);
   const e = new Date(end);
@@ -117,6 +118,11 @@ export function ProgramTab({
 
   return (
     <div style={{ opacity: isPending ? 0.6 : 1, transition: "opacity 150ms" }}>
+      {!days.length && (
+        <p style={{ color: "var(--text-soft)", fontStyle: "italic" }}>
+          Add trip dates before planning day-by-day activities.
+        </p>
+      )}
       {days.map((day) => {
         const dayItems = grouped.get(day) ?? [];
         return (

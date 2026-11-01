@@ -76,6 +76,37 @@ export default function SetupForm() {
         )}
       </div>
 
+      <div>
+        <label htmlFor="email" style={labelStyle}>Your email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          placeholder="you@example.com"
+          autoComplete="email"
+          style={inputStyle}
+        />
+        {state.errors?.email && <p style={errorStyle}>{state.errors.email[0]}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="pin" style={labelStyle}>Choose a 4–8 digit PIN</label>
+        <input
+          id="pin"
+          name="pin"
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]{4,8}"
+          minLength={4}
+          maxLength={8}
+          required
+          autoComplete="new-password"
+          style={inputStyle}
+        />
+        {state.errors?.pin && <p style={errorStyle}>{state.errors.pin[0]}</p>}
+      </div>
+
       {/* Photo */}
       <div>
         <span style={labelStyle}>Your photo (optional)</span>

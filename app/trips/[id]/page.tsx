@@ -6,6 +6,7 @@ import { TripHeader } from "./TripHeader";
 import { TripTabs } from "./TripTabs";
 import { OverviewTab } from "./OverviewTab";
 import { TripActions } from "./TripActions";
+import { TripPeople } from "./TripPeople";
 import { ChatTab } from "./ChatTab";
 import { ProposalsTab } from "./ProposalsTab";
 import { CostsTab } from "./CostsTab";
@@ -56,6 +57,23 @@ export default async function TripPage({ params, searchParams }: PageProps) {
   const activeTab = tab ?? "overview";
   const isCaptain = trip.captainId === member.id;
   const coverStorageKey = trip.images[0]?.storageKey ?? null;
+  const [tripParticipants, groupMembers] = await Promise.all([
+    db.tripParticipant.findMany({
+      where: { tripId: trip.id },
+      orderBy: { createdAt: "asc" },
+      select: {
+        memberId: true,
+        status: true,
+        member: { select: { name: true } },
+      },
+    }),
+    db.member.findMany({
+      where: { familyId: family.id, isDependent: false },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
+  const participantIds = new Set(tripParticipants.map(({ memberId }) => memberId));
 
   // Tab-specific data
   let activities: {
@@ -206,7 +224,16 @@ export default async function TripPage({ params, searchParams }: PageProps) {
       }),
       db.room.findMany({ where: { tripId: id }, include: { members: true } }),
       db.expense.findMany({ where: { tripId: id }, orderBy: { createdAt: "desc" } }),
-      db.attendance.count({ where: { tripId: id, memberId: member.id, status: "IN", date: { gte: trip.startDate, lte: trip.endDate } } }),
+      db.attendance.count({
+        where: {
+          tripId: id,
+          memberId: member.id,
+          status: "IN",
+          ...(trip.startDate && trip.endDate
+            ? { date: { gte: trip.startDate, lte: trip.endDate } }
+            : {}),
+        },
+      }),
     ]);
 
     costCategories = cats.map((c) => ({
@@ -384,12 +411,23 @@ export default async function TripPage({ params, searchParams }: PageProps) {
               title: trip.title,
               tagline: trip.tagline,
               description: trip.descriptionMd,
-              startDate: trip.startDate.toISOString().split("T")[0]!,
-              endDate: trip.endDate.toISOString().split("T")[0]!,
+              startDate: trip.startDate?.toISOString().split("T")[0] ?? null,
+              endDate: trip.endDate?.toISOString().split("T")[0] ?? null,
               season: trip.season,
             }}
           />
         )}
+
+        <TripPeople
+          tripId={trip.id}
+          currentMemberId={member.id}
+          participants={tripParticipants.map((participant) => ({
+            memberId: participant.memberId,
+            name: participant.member.name,
+            status: participant.status,
+          }))}
+          inviteableMembers={groupMembers.filter(({ id: memberId }) => !participantIds.has(memberId))}
+        />
 
         <TripTabs tripId={trip.id} activeTab={activeTab} />
 

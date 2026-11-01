@@ -29,8 +29,8 @@ export interface MapTrip {
   lat: number;
   lng: number;
   coverUrl: string | null;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   captainName: string;
   goingCount: number;
 }
@@ -160,7 +160,8 @@ function buildStyle(key: string): maplibregl.StyleSpecification {
 
 // ─── Date formatter ──────────────────────────────────────────────────────────
 
-function formatRange(start: string, end: string): string {
+function formatRange(start: string | null, end: string | null): string {
+  if (!start || !end) return "Dates to be decided";
   const s = new Date(start);
   const e = new Date(end);
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };

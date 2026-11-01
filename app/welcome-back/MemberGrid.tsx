@@ -176,10 +176,11 @@ function MemberLoginPanel({
               name="pin"
               type="password"
               inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
+              pattern="[0-9]{4,8}"
+              minLength={4}
+              maxLength={8}
               required
-              placeholder="••••"
+              placeholder="••••••"
               style={{
                 display: "block",
                 width: "100%",

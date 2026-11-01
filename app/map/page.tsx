@@ -98,8 +98,8 @@ export default async function MapPage({ searchParams }: MapPageProps) {
         lat: t.lat!,
         lng: t.lng!,
         coverUrl: coverKey && S3_BASE ? `${S3_BASE}/${coverKey}` : null,
-        startDate: t.startDate.toISOString(),
-        endDate: t.endDate.toISOString(),
+        startDate: t.startDate?.toISOString() ?? null,
+        endDate: t.endDate?.toISOString() ?? null,
         captainName: t.captain.name,
         goingCount: uniqueGoing.size,
       };
@@ -107,11 +107,15 @@ export default async function MapPage({ searchParams }: MapPageProps) {
 
   // Collect years
   const allTrips = await db.trip.findMany({
-    where: { familyId: family.id, lat: { not: null } },
+    where: {
+      familyId: family.id,
+      lat: { not: null },
+      startDate: { not: null },
+    },
     select: { startDate: true },
     orderBy: { startDate: "desc" },
   });
-  const years = [...new Set(allTrips.map((t) => t.startDate.getFullYear()))].sort(
+  const years = [...new Set(allTrips.flatMap((t) => t.startDate ? [t.startDate.getFullYear()] : []))].sort(
     (a, b) => b - a,
   );
 

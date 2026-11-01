@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { createId } from "@paralleldrive/cuid2";
 import { logActivity } from "@/lib/activity";
 import { z } from "zod";
+import { headers } from "next/headers";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function setCalendarCostVisibility(visible: boolean) {
   const value = z.boolean().parse(visible);
@@ -49,29 +51,83 @@ export async function updateProfile(name: string) {
 
 export async function changePin(oldPin: string, newPin: string) {
   const { member } = await requireMember();
+  const account = member.userAccountId
+    ? await db.userAccount.findUniqueOrThrow({
+        where: { id: member.userAccountId },
+      })
+    : null;
 
   // Validate old PIN
-  if (member.pinHash) {
+  const currentPinHash = account?.pinHash ?? member.pinHash;
+  if (currentPinHash) {
     const oldHash = hashToken(oldPin);
-    if (oldHash !== member.pinHash) {
+    if (oldHash !== currentPinHash) {
       throw new Error("Current PIN is incorrect.");
     }
   }
 
   // Validate new PIN
-  if (!newPin || newPin.length < 4 || newPin.length > 8) {
-    throw new Error("New PIN must be 4-8 characters.");
+  if (!/^\d{4,8}$/.test(newPin)) {
+    throw new Error("New PIN must be 4–8 digits.");
   }
 
   const newHash = hashToken(newPin);
 
-  await db.member.update({
-    where: { id: member.id },
-    data: { pinHash: newHash },
-  });
+  if (account) {
+    await db.userAccount.update({
+      where: { id: account.id },
+      data: { pinHash: newHash },
+    });
+  } else {
+    await db.member.update({
+      where: { id: member.id },
+      data: { pinHash: newHash },
+    });
+  }
 
   await logActivity(member.id, "PIN_CHANGED");
 
+  revalidatePath("/me");
+}
+
+export async function linkEmailAccount(email: string, pin: string) {
+  const { member, family } = await requireMember();
+  const normalizedEmail = z.string().email().max(254).parse(email.trim()).toLowerCase();
+  if (!/^\d{4,8}$/.test(pin)) {
+    throw new Error("PIN must be 4–8 digits.");
+  }
+  if (member.userAccountId) {
+    throw new Error("This member is already linked to an email account.");
+  }
+  const requestHeaders = await headers();
+  const ip =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (!checkRateLimit(`link-account:${member.id}:${ip}`, 5, 15 * 60 * 1000)) {
+    throw new Error("Too many account-link attempts. Please wait 15 minutes.");
+  }
+
+  let account = await db.userAccount.findUnique({
+    where: { email: normalizedEmail },
+  });
+  const pinHash = hashToken(pin);
+  if (account && account.pinHash !== pinHash) {
+    throw new Error("That email already has an account. Enter its PIN to link it.");
+  }
+  if (!account) {
+    account = await db.userAccount.create({
+      data: {
+        id: createId(),
+        email: normalizedEmail,
+        pinHash,
+      },
+    });
+  }
+
+  await db.member.update({
+    where: { id: member.id, familyId: family.id },
+    data: { userAccountId: account.id },
+  });
+  await logActivity(member.id, "EMAIL_ACCOUNT_LINKED");
   revalidatePath("/me");
 }
 

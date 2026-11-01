@@ -87,6 +87,40 @@ const DATES_2 = ["2025-07-01", "2025-07-02"];
 
 describe("Cost Splitting Engine", () => {
   describe("M6 regressions", () => {
+    it("allocates date-independent costs to invited members on undated trips", () => {
+      const result = calculateCosts(
+        makeBaseInput({
+          trip: makeTrip({ startDate: null, endDate: null }),
+          members: [makeMember("going"), makeMember("maybe"), makeMember("not-invited")],
+          participants: [
+            { memberId: "going", status: "IN" },
+            { memberId: "maybe", status: "MAYBE" },
+          ],
+          lines: [
+            makeLine({ basis: "PER_PERSON_FLAT", amountMinor: 300 }),
+            makeLine({
+              id: "nightly",
+              basis: "PER_PERSON_PER_NIGHT",
+              amountMinor: 100,
+            }),
+          ],
+          includeMaybe: false,
+        }),
+      );
+
+      expect(result.perMember.map(({ totalMinor }) => totalMinor)).toEqual([
+        300, 0, 0,
+      ]);
+      expect(result.totals).toEqual({
+        estimateMinor: 300,
+        allocatedMinor: 300,
+        unallocatedMinor: 0,
+      });
+      expect(result.warnings).toContain(
+        'Line "Test Line" (nightly): add trip dates to calculate date-based costs',
+      );
+    });
+
     it.each(["PER_ROOM_PER_NIGHT", "PER_HOUSEHOLD_FLAT"] as const)(
       "rounds the whole converted %s line, not each room or household independently",
       (basis) => {

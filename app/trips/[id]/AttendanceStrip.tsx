@@ -6,12 +6,13 @@ import { updateAttendance, bulkUpdateAttendance } from "./attendance-actions";
 interface AttendanceStripProps {
   tripId: string;
   memberId: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   attendance: { memberId: string; date: string; status: string }[];
 }
 
-function getDays(start: string, end: string): string[] {
+function getDays(start: string | null, end: string | null): string[] {
+  if (!start || !end) return [];
   const days: string[] = [];
   const s = new Date(start);
   const e = new Date(end);

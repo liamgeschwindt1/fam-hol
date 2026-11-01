@@ -18,8 +18,8 @@ export interface YearTrip {
   id: string;
   title: string;
   season: Season;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
 }
 
 interface CalendarYearProps {
@@ -45,6 +45,7 @@ export function CalendarYear({ trips, year }: CalendarYearProps) {
   // Index trip seasons by date
   const tripsByDate = new Map<string, Season[]>();
   for (const trip of trips) {
+    if (!trip.startDate || !trip.endDate) continue;
     const start = new Date(trip.startDate);
     const end = new Date(trip.endDate);
     const cur = new Date(start);

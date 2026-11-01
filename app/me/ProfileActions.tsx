@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   changePin,
+  linkEmailAccount,
   regenerateCalendarToken,
   setCalendarCostVisibility,
 } from "./actions";
@@ -11,9 +12,11 @@ import { MoneyError, useMoneyAction } from "../trips/[id]/MoneyForms";
 export function ProfileActions({
   calendarToken,
   calendarShowCosts,
+  accountEmail,
 }: {
   calendarToken: string;
   calendarShowCosts: boolean;
+  accountEmail: string | null;
 }) {
   const [error, action, pending] = useMoneyAction(async (data) => {
     await setCalendarCostVisibility(data.get("showCosts") === "on");
@@ -27,6 +30,7 @@ export function ProfileActions({
       }}
     >
       <ChangePinForm />
+      <EmailAccountSection accountEmail={accountEmail} />
       <CalendarTokenSection calendarToken={calendarToken} />
       <form action={action}>
         <MoneyError error={error} />
@@ -50,6 +54,58 @@ export function ProfileActions({
         </button>
       </form>
     </div>
+  );
+}
+
+function EmailAccountSection({ accountEmail }: { accountEmail: string | null }) {
+  const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  function handleSubmit(formData: FormData) {
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        await linkEmailAccount(
+          String(formData.get("email") ?? ""),
+          String(formData.get("pin") ?? ""),
+        );
+        setMessage({ text: "Email account linked.", isError: false });
+      } catch (error) {
+        setMessage({
+          text: error instanceof Error ? error.message : "Could not link email account.",
+          isError: true,
+        });
+      }
+    });
+  }
+
+  return (
+    <section>
+      <h3 style={{ fontSize: "var(--text-sm)", margin: "0 0 var(--space-3)", color: "var(--ink)" }}>
+        Email account
+      </h3>
+      {accountEmail ? (
+        <p style={{ color: "var(--text-soft)" }}>
+          This profile is linked to <strong>{accountEmail}</strong>. You can use it to switch between groups.
+        </p>
+      ) : (
+        <form action={handleSubmit} className="account-link-form">
+          <p>Link an email account to use this profile in other groups.</p>
+          <label>
+            Email
+            <input name="email" type="email" required autoComplete="email" />
+          </label>
+          <label>
+            Account PIN (4–8 digits)
+            <input name="pin" type="password" inputMode="numeric" pattern="[0-9]{4,8}" minLength={4} maxLength={8} required />
+          </label>
+          <button type="submit" disabled={isPending}>
+            {isPending ? "Linking…" : "Link account"}
+          </button>
+        </form>
+      )}
+      {message && <p role={message.isError ? "alert" : "status"}>{message.text}</p>}
+    </section>
   );
 }
 
@@ -117,6 +173,9 @@ function ChangePinForm() {
             id="old-pin"
             type="password"
             inputMode="numeric"
+            pattern="[0-9]{4,8}"
+            minLength={4}
+            maxLength={8}
             autoComplete="current-password"
             value={oldPin}
             onChange={(e) => setOldPin(e.target.value)}
@@ -149,6 +208,7 @@ function ChangePinForm() {
             id="new-pin"
             type="password"
             inputMode="numeric"
+            pattern="[0-9]{4,8}"
             autoComplete="new-password"
             value={newPin}
             onChange={(e) => setNewPin(e.target.value)}

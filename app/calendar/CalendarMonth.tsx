@@ -19,8 +19,8 @@ export interface CalendarTrip {
   id: string;
   title: string;
   season: Season;
-  startDate: string; // ISO
-  endDate: string;   // ISO
+  startDate: string | null; // ISO
+  endDate: string | null;   // ISO
   memberStatus: "IN" | "MAYBE" | null; // null = not responded
 }
 
@@ -66,6 +66,7 @@ export function CalendarMonth({ trips, year, month }: CalendarMonthProps) {
   // Index trips by date
   const tripsByDate = new Map<string, CalendarTrip[]>();
   for (const trip of trips) {
+    if (!trip.startDate || !trip.endDate) continue;
     const start = new Date(trip.startDate);
     const end = new Date(trip.endDate);
     const cur = new Date(start);

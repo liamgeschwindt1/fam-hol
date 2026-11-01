@@ -44,8 +44,8 @@ interface EditTripModalProps {
     title: string;
     tagline: string | null;
     description: string;
-    startDate: string;
-    endDate: string;
+    startDate: string | null;
+    endDate: string | null;
     season: Season;
   };
   onClose: () => void;
@@ -212,7 +212,7 @@ export function EditTripModal({
                 id="edit-startDate"
                 name="startDate"
                 type="date"
-                defaultValue={initialData.startDate}
+                defaultValue={initialData.startDate ?? ""}
                 style={inputStyle}
               />
             </div>
@@ -224,7 +224,7 @@ export function EditTripModal({
                 id="edit-endDate"
                 name="endDate"
                 type="date"
-                defaultValue={initialData.endDate}
+                defaultValue={initialData.endDate ?? ""}
                 style={inputStyle}
               />
             </div>

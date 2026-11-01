@@ -11,12 +11,13 @@ interface TripHeaderProps {
   coverStorageKey: string | null;
   season: Season;
   status: TripStatus;
-  startDate: Date;
-  endDate: Date;
+  startDate: Date | null;
+  endDate: Date | null;
   captain: { name: string; photoKey: string | null };
 }
 
-function formatDateRange(start: Date, end: Date): string {
+function formatDateRange(start: Date | null, end: Date | null): string {
+  if (!start || !end) return "Dates to be decided";
   const opts: Intl.DateTimeFormatOptions = {
     month: "long",
     day: "numeric",

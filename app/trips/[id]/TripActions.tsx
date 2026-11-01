@@ -29,8 +29,8 @@ interface TripActionsProps {
     title: string;
     tagline: string | null;
     description: string;
-    startDate: string;
-    endDate: string;
+    startDate: string | null;
+    endDate: string | null;
     season: Season;
   };
 }

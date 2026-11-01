@@ -10,8 +10,8 @@ import type { Prisma } from "@prisma/client";
 const CreateTripSchema = z.object({
   title: z.string().min(1).max(120),
   destination: z.string().max(200).optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  startDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
+  endDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
   description: z.string().max(5000).optional(),
   coverImageKey: z.string().optional(),
   season: z.enum([
@@ -25,6 +25,20 @@ const CreateTripSchema = z.object({
     "OTHER",
   ]),
   tagline: z.string().max(200).optional(),
+}).superRefine(({ startDate, endDate }, ctx) => {
+  if (Boolean(startDate) !== Boolean(endDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Add both dates or leave both blank.",
+      path: [startDate ? "endDate" : "startDate"],
+    });
+  } else if (startDate && endDate && endDate < startDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "End date must be on or after the start date.",
+      path: ["endDate"],
+    });
+  }
 });
 
 export async function createTrip(formData: FormData) {
@@ -43,12 +57,12 @@ export async function createTrip(formData: FormData) {
 
   const parsed = CreateTripSchema.parse(raw);
 
-  const start = new Date(parsed.startDate + "T00:00:00Z");
-  const end = new Date(parsed.endDate + "T00:00:00Z");
-
-  if (end < start) {
-    throw new Error("End date must be after start date");
-  }
+  const start = parsed.startDate
+    ? new Date(parsed.startDate + "T00:00:00Z")
+    : null;
+  const end = parsed.endDate
+    ? new Date(parsed.endDate + "T00:00:00Z")
+    : null;
 
   const tripId = createId();
 
@@ -82,6 +96,14 @@ export async function createTrip(formData: FormData) {
           CHILD_5_11: 0.5,
           CHILD_0_4: 0,
         },
+      },
+    });
+    await tx.tripParticipant.create({
+      data: {
+        tripId,
+        memberId: member.id,
+        status: "IN",
+        invitedById: member.id,
       },
     });
 

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Instrument_Serif, Hanken_Grotesk, DM_Mono } from "next/font/google";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { GroupSwitcher } from "@/components/GroupSwitcher";
+import { getCurrentGroups, getCurrentSession } from "@/lib/auth";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -38,18 +40,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [groups, session] = await Promise.all([
+    getCurrentGroups(),
+    getCurrentSession(),
+  ]);
+
   return (
     <html
       lang="en"
       className={`${instrumentSerif.variable} ${hankenGrotesk.variable} ${dmMono.variable}`}
     >
       <body>
-        <SiteNav />
+        <SiteNav groups={groups} activeMemberId={session?.member.id ?? null} />
         <main>{children}</main>
         <div
           id="live-region"
@@ -62,7 +69,13 @@ export default function RootLayout({
   );
 }
 
-function SiteNav() {
+function SiteNav({
+  groups,
+  activeMemberId,
+}: {
+  groups: Awaited<ReturnType<typeof getCurrentGroups>>;
+  activeMemberId: string | null;
+}) {
   return (
     <nav aria-label="Site navigation" className="site-nav">
       <div className="site-nav-inner">
@@ -78,7 +91,9 @@ function SiteNav() {
           <NavLink href="/map">Map</NavLink>
           <NavLink href="/calendar">Calendar</NavLink>
           <NavLink href="/inbox">Inbox</NavLink>
+          <NavLink href="/groups">Group</NavLink>
           <NavLink href="/me">Me</NavLink>
+          <GroupSwitcher groups={groups} activeMemberId={activeMemberId} />
           <ThemeToggle />
         </div>
       </div>

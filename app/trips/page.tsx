@@ -85,12 +85,16 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
 
   // Collect years for filter
   const allTrips = await db.trip.findMany({
-    where: { familyId: family.id },
+    where: { familyId: family.id, startDate: { not: null } },
     select: { startDate: true },
     orderBy: { startDate: "desc" },
   });
   const years = [
-    ...new Set(allTrips.map((t) => t.startDate.getFullYear())),
+    ...new Set(
+      allTrips.flatMap((t) =>
+        t.startDate ? [t.startDate.getFullYear()] : [],
+      ),
+    ),
   ].sort((a, b) => b - a);
 
   function buildFilterUrl(key: string, value: string | null) {
@@ -354,8 +358,8 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
                 coverUrl={coverUrl}
                 season={trip.season}
                 status={trip.status}
-                startDate={trip.startDate.toISOString()}
-                endDate={trip.endDate.toISOString()}
+                startDate={trip.startDate?.toISOString() ?? null}
+                endDate={trip.endDate?.toISOString() ?? null}
                 captain={trip.captain}
               />
             );

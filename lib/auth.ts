@@ -113,6 +113,36 @@ export async function getSession(request: Request): Promise<{
 
 // ─── requireMember ────────────────────────────────────────────────────────────
 
+export async function getCurrentSession() {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get(COOKIE_NAME)?.value;
+  if (!rawToken) return null;
+
+  const session = await db.session.findUnique({
+    where: { tokenHash: hashToken(rawToken) },
+    include: { member: { include: { family: true, userAccount: true } } },
+  });
+
+  if (!session || session.expiresAt < new Date()) return null;
+  return session;
+}
+
+export async function getCurrentGroups() {
+  const session = await getCurrentSession();
+  const userAccountId = session?.member.userAccountId;
+  if (!userAccountId) return [];
+
+  return db.member.findMany({
+    where: { userAccountId, isDependent: false },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      familyId: true,
+      family: { select: { name: true } },
+    },
+  });
+}
+
 export async function requireMember() {
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(COOKIE_NAME)?.value;

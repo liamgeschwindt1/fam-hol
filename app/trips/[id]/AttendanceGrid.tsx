@@ -4,8 +4,8 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 
 interface AttendanceGridProps {
   tripId: string;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   members: {
     id: string;
     name: string;
@@ -16,7 +16,8 @@ interface AttendanceGridProps {
   attendance: { memberId: string; date: string; status: string }[];
 }
 
-function getDays(start: string, end: string): string[] {
+function getDays(start: string | null, end: string | null): string[] {
+  if (!start || !end) return [];
   const days: string[] = [];
   const s = new Date(start);
   const e = new Date(end);
@@ -75,7 +76,9 @@ export function AttendanceGrid({
             fontSize: "var(--text-sm)",
           }}
         >
-          No attendance set yet. Tap the days above to mark yours.
+          {days.length
+            ? "No attendance set yet. Tap the days above to mark yours."
+            : "Add trip dates to plan attendance by day."}
         </p>
       </section>
     );

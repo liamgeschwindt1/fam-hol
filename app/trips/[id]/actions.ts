@@ -12,14 +12,8 @@ const UpdateTripSchema = z.object({
   title: z.string().min(1).max(120).optional(),
   tagline: z.string().max(200).optional(),
   description: z.string().max(5000).optional(),
-  startDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  endDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  startDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
+  endDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
   season: z
     .enum([
       "SNOW",
@@ -33,6 +27,20 @@ const UpdateTripSchema = z.object({
     ])
     .optional(),
   coverImageKey: z.string().optional(),
+}).superRefine(({ startDate, endDate }, ctx) => {
+  if (Boolean(startDate) !== Boolean(endDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Add both dates or leave both blank.",
+      path: [startDate ? "endDate" : "startDate"],
+    });
+  } else if (startDate && endDate && endDate < startDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "End date must be on or after the start date.",
+      path: ["endDate"],
+    });
+  }
 });
 
 export async function updateTrip(formData: FormData) {
@@ -43,8 +51,8 @@ export async function updateTrip(formData: FormData) {
     title: (formData.get("title") as string) || undefined,
     tagline: formData.get("tagline") as string | undefined,
     description: (formData.get("description") as string) || undefined,
-    startDate: (formData.get("startDate") as string) || undefined,
-    endDate: (formData.get("endDate") as string) || undefined,
+    startDate: (formData.get("startDate") as string) ?? "",
+    endDate: (formData.get("endDate") as string) ?? "",
     season: (formData.get("season") as string) || undefined,
     coverImageKey: (formData.get("coverImageKey") as string) || undefined,
   };
@@ -74,12 +82,27 @@ export async function updateTrip(formData: FormData) {
     updateData.descriptionMd = parsed.description;
     changes.push("description");
   }
-  if (parsed.startDate) {
-    updateData.startDate = new Date(parsed.startDate + "T00:00:00Z");
-    changes.push("dates");
-  }
-  if (parsed.endDate) {
-    updateData.endDate = new Date(parsed.endDate + "T00:00:00Z");
+  const nextStartDate = parsed.startDate
+    ? new Date(parsed.startDate + "T00:00:00Z")
+    : null;
+  const nextEndDate = parsed.endDate
+    ? new Date(parsed.endDate + "T00:00:00Z")
+    : null;
+  if (
+    nextStartDate?.getTime() !== trip.startDate?.getTime() ||
+    nextEndDate?.getTime() !== trip.endDate?.getTime()
+  ) {
+    if (!nextStartDate && !nextEndDate) {
+      const [attendanceCount, programCount] = await Promise.all([
+        db.attendance.count({ where: { tripId: trip.id } }),
+        db.programItem.count({ where: { tripId: trip.id } }),
+      ]);
+      if (attendanceCount || programCount) {
+        throw new Error("Remove scheduled attendance and program items before clearing trip dates.");
+      }
+    }
+    updateData.startDate = nextStartDate;
+    updateData.endDate = nextEndDate;
     changes.push("dates");
   }
   if (parsed.season) {
@@ -172,6 +195,9 @@ export async function advanceStatus(formData: FormData) {
   if (trip.captainId !== member.id) {
     throw new Error("Only the captain can change the status");
   }
+  if (newStatus === "CONFIRMED" && (!trip.startDate || !trip.endDate)) {
+    throw new Error("Add trip dates before confirming the trip.");
+  }
 
   await db.$transaction(async (tx) => {
     await tx.trip.update({
@@ -196,5 +222,59 @@ export async function advanceStatus(formData: FormData) {
     });
   });
 
+  revalidatePath(`/trips/${tripId}`);
+}
+
+export async function inviteTripMembers(formData: FormData) {
+  const { member, family } = await requireMember();
+  const tripId = z.string().min(1).parse(formData.get("tripId"));
+  const memberIds = z
+    .array(z.string().min(1))
+    .min(1)
+    .parse(formData.getAll("memberId"));
+  const trip = await db.trip.findFirst({
+    where: { id: tripId, familyId: family.id },
+    select: { id: true },
+  });
+  if (!trip) throw new Error("Trip not found in your group.");
+
+  const invitees = await db.member.findMany({
+    where: { id: { in: memberIds }, familyId: family.id, isDependent: false },
+    select: { id: true },
+  });
+  if (invitees.length !== new Set(memberIds).size) {
+    throw new Error("One or more selected members are not in your group.");
+  }
+
+  await db.$transaction(
+    invitees.map(({ id }) =>
+      db.tripParticipant.upsert({
+        where: { tripId_memberId: { tripId, memberId: id } },
+        create: { tripId, memberId: id, invitedById: member.id },
+        update: {},
+      }),
+    ),
+  );
+  revalidatePath(`/trips/${tripId}`);
+}
+
+export async function respondToTripInvitation(formData: FormData) {
+  const { member, family } = await requireMember();
+  const tripId = z.string().min(1).parse(formData.get("tripId"));
+  const status = z.enum(["IN", "MAYBE", "OUT"]).parse(formData.get("status"));
+  const participant = await db.tripParticipant.findFirst({
+    where: {
+      tripId,
+      memberId: member.id,
+      trip: { familyId: family.id },
+    },
+    select: { tripId: true },
+  });
+  if (!participant) throw new Error("You have not been invited to this trip.");
+
+  await db.tripParticipant.update({
+    where: { tripId_memberId: { tripId, memberId: member.id } },
+    data: { status },
+  });
   revalidatePath(`/trips/${tripId}`);
 }
