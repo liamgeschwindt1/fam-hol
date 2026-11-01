@@ -17,7 +17,9 @@ Use Node 22 and pnpm 9.
    pnpm dev
    ```
 
-4. Open `/setup` to create the family.
+4. Open the app to create the family and your admin profile. On a fresh database, visitors without a session are automatically sent to `/setup`; you can also open that address directly. Once a family exists, returning visitors see the member sign-in screen.
+
+After creation, the admin lands on `/admin` to generate an invite link and manage members. The home dashboard shows **Manage family & invite people** to admins, not a first-time setup link. Opening `/setup` again sends signed-in admins to family management, other members to trips, and signed-out visitors to sign-in.
 
 For Railway, provision PostgreSQL and an S3-compatible bucket, configure the variables in `.env.example`, and deploy using `railway.json`.
 

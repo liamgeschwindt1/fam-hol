@@ -1,10 +1,19 @@
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 import MemberGrid from "./MemberGrid";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Who are you?" };
 
 export default async function WelcomeBackPage() {
+  const family = await db.family.findFirst({
+    select: { name: true },
+  });
+
+  if (!family) {
+    redirect("/setup");
+  }
+
   const members = await db.member.findMany({
     where: { isDependent: false },
     orderBy: { name: "asc" },
@@ -15,58 +24,6 @@ export default async function WelcomeBackPage() {
       pinHash: true,
     },
   });
-
-  const family = await db.family.findFirst({
-    select: { name: true },
-  });
-
-  if (!family) {
-    // No family set up yet — redirect to setup
-    return (
-      <div
-        style={{
-          minHeight: "calc(100dvh - 56px)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "var(--space-12) var(--space-6)",
-          textAlign: "center",
-        }}
-      >
-        <h1
-          className="font-display"
-          style={{
-            fontSize: "var(--text-2xl)",
-            color: "var(--ink)",
-            margin: "0 0 var(--space-4)",
-          }}
-        >
-          No family set up yet
-        </h1>
-        <p style={{ color: "var(--text-soft)", fontSize: "var(--text-sm)", margin: "0 0 var(--space-6)" }}>
-          Set up your family space to get started.
-        </p>
-        <a
-          href="/setup"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            height: "44px",
-            padding: "0 var(--space-6)",
-            backgroundColor: "var(--sea)",
-            color: "#fff",
-            borderRadius: "4px",
-            fontSize: "var(--text-sm)",
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          Set up family space
-        </a>
-      </div>
-    );
-  }
 
   return (
     <div

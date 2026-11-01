@@ -18,7 +18,7 @@ async function requireAdmin() {
 
 // ─── Invite token regeneration ────────────────────────────────────────────────
 
-export async function regenerateInviteToken(): Promise<void> {
+export async function regenerateInviteToken(): Promise<string> {
   const { family } = await requireAdmin();
 
   const rawToken = crypto.randomBytes(32).toString("base64url");
@@ -29,7 +29,7 @@ export async function regenerateInviteToken(): Promise<void> {
     data: { inviteTokenHash },
   });
 
-  redirect("/admin");
+  return rawToken;
 }
 
 // ─── Toggle admin ─────────────────────────────────────────────────────────────

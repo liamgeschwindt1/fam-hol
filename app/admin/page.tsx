@@ -42,17 +42,6 @@ export default async function AdminPage() {
     orderBy: { createdAt: "asc" },
   });
 
-  // Build invite URL from raw token (we only store hash, so generate fresh URL for display)
-  // Actually, we store the hash. The admin needs to regenerate to get a new URL.
-  // For now, show the family invite hash hint and let admin regenerate.
-  // We'll display a "Regenerate" button and show the URL from the stored hash if we can't reverse it.
-  // Since we can't reverse the hash, we store the last raw token in a separate field.
-  // SIMPLE APPROACH: show that an invite link exists, allow regeneration which will display the new URL.
-  // After regeneration, the server redirects to /admin which re-renders with the new hash.
-  // We need to persist the raw token temporarily — but that's a security concern.
-  // Better approach: redirect to /admin?invite=<rawToken> after regeneration.
-  // For now: show a "Copy invite link" button that regenerates and shows the link.
-
   return (
     <AdminClient
       currentMemberId={member.id}

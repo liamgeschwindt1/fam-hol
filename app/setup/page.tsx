@@ -1,29 +1,31 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { requireMember } from "@/lib/auth";
 import SetupForm from "./SetupForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Set up your family space" };
 
 export default async function SetupPage() {
-  // If a family already exists, send to home
   const existing = await db.family.findFirst();
   if (existing) {
-    redirect("/");
+    const { member } = await requireMember();
+    redirect(member.isAdmin ? "/admin" : "/trips");
   }
 
   return (
-    <div
-      style={{
-        minHeight: "calc(100dvh - 56px)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "var(--space-12) var(--space-6)",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: "480px" }}>
+    <div className="setup-shell">
+      <aside className="setup-story">
+        <span className="home-badge">Good times start with your people</span>
+        <h2 className="font-display">One family.<br /><em>Endless adventures.</em></h2>
+        <p>A cosy little corner of the internet for your favourite people and the places you&apos;ll go together.</p>
+        <ol className="setup-steps">
+          <li><span>01</span> Create your family space</li>
+          <li><span>02</span> Invite everyone along</li>
+          <li><span>03</span> Plan something worth remembering</li>
+        </ol>
+      </aside>
+      <div className="setup-panel">
         <p
           className="label-caps"
           style={{ marginBottom: "var(--space-3)", color: "var(--sea)" }}

@@ -101,6 +101,9 @@ export default function SetupForm() {
               </option>
             ))}
           </select>
+          {state.errors?.homeCurrency && (
+            <p style={errorStyle}>{state.errors.homeCurrency[0]}</p>
+          )}
         </div>
         <div>
           <label htmlFor="secondCurrency" style={labelStyle}>
@@ -114,6 +117,9 @@ export default function SetupForm() {
               </option>
             ))}
           </select>
+          {state.errors?.secondCurrency && (
+            <p style={errorStyle}>{state.errors.secondCurrency[0]}</p>
+          )}
         </div>
       </div>
 
@@ -147,8 +153,7 @@ const inputStyle: React.CSSProperties = {
   color: "var(--ink)",
   backgroundColor: "var(--bg-raised)",
   border: "1px solid var(--border)",
-  borderRadius: "4px",
-  outline: "none",
+  borderRadius: "10px",
 };
 
 const selectStyle: React.CSSProperties = {
@@ -172,7 +177,7 @@ function buttonStyle(pending: boolean): React.CSSProperties {
     backgroundColor: pending ? "var(--ink-soft)" : "var(--sea)",
     color: "#fff",
     border: "none",
-    borderRadius: "4px",
+    borderRadius: "10px",
     fontSize: "var(--text-sm)",
     fontWeight: 600,
     cursor: pending ? "not-allowed" : "pointer",

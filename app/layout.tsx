@@ -61,25 +61,10 @@ function SiteNav() {
   return (
     <nav
       aria-label="Site navigation"
-      style={{
-        borderBottom: "1px solid var(--border)",
-        backgroundColor: "var(--bg)",
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
-      }}
+      className="site-nav"
     >
       <div
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding: "0 var(--space-6)",
-          height: "56px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "var(--space-8)",
-        }}
+        className="site-nav-inner"
       >
         {/* Wordmark */}
         <Link
@@ -96,13 +81,8 @@ function SiteNav() {
           Family Trips
         </Link>
 
-        {/* Nav placeholder — populated in M1 */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-6)",
-          }}
+          className="site-nav-links"
         >
           <NavLink href="/trips">Trips</NavLink>
           <NavLink href="/map">Map</NavLink>
@@ -126,6 +106,7 @@ function NavLink({
   return (
     <Link
       href={href}
+      className="site-nav-link"
       style={{
         fontSize: "var(--text-sm)",
         fontWeight: 500,

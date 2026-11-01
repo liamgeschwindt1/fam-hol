@@ -39,27 +39,40 @@ type Props = {
 export default function AdminClient({
   currentMemberId,
   family,
-  baseUrl: _baseUrl,
+  baseUrl,
   members,
   pendingRequests,
 }: Props) {
   const [copied, setCopied] = useState(false);
-  const [inviteUrl, _setInviteUrl] = useState<string | null>(null);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   async function handleRegenerate() {
     setRegenerating(true);
-    // We call the server action which redirects — but we need the new token displayed
-    // Instead, call a fetch to get the new token and display it
-    // Since the action does redirect, we'll use a form submission pattern
-    await regenerateInviteToken();
-    setRegenerating(false);
+    setInviteError(null);
+    try {
+      const token = await regenerateInviteToken();
+      setInviteUrl(`${baseUrl}/join/${token}`);
+      setCopied(false);
+    } catch (error) {
+      console.error("Failed to generate family invite link", error);
+      setInviteError("Could not generate an invite link. Please try again.");
+    } finally {
+      setRegenerating(false);
+    }
   }
 
   async function handleCopy(url: string) {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setInviteError(null);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy family invite link", error);
+      setInviteError("Could not copy automatically. Select and copy the link above.");
+    }
   }
 
   return (
@@ -71,7 +84,7 @@ export default function AdminClient({
           padding: 2rem 1rem 4rem;
         }
         .admin-page h1 {
-          font-family: var(--font-instrument-serif);
+          font-family: var(--font-instrument);
           font-size: 2.5rem;
           color: var(--ink);
           margin-bottom: 0.25rem;
@@ -96,7 +109,7 @@ export default function AdminClient({
         }
         .invite-box {
           background: var(--paper-2);
-          border-radius: 6px;
+          border-radius: 16px;
           padding: 1.25rem 1.5rem;
           display: flex;
           flex-direction: column;
@@ -219,6 +232,12 @@ export default function AdminClient({
               Regenerate to get a fresh invite link to share with new family members.
             </div>
           )}
+          {inviteError && (
+            <p role="alert" style={{ color: "var(--danger)" }}>{inviteError}</p>
+          )}
+          <p style={{ color: "var(--text-soft)", fontSize: "0.8125rem", margin: 0 }}>
+            A new link replaces the previous invite. Copy it before leaving this page.
+          </p>
           <div className="btn-row">
             {inviteUrl && (
               <button className="btn btn-primary" onClick={() => handleCopy(inviteUrl)}>

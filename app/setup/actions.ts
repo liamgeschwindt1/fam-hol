@@ -5,11 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createId } from "@paralleldrive/cuid2";
 import { db } from "@/lib/db";
-import { hashToken, createSession, setSessionCookie } from "@/lib/auth";
+import { hashToken, createSession, setSessionCookie, requireMember } from "@/lib/auth";
 
 const SetupSchema = z.object({
-  familyName: z.string().min(1, "Family name is required").max(80),
-  adminName: z.string().min(1, "Your name is required").max(80),
+  familyName: z.string().trim().min(1, "Family name is required").max(80),
+  adminName: z.string().trim().min(1, "Your name is required").max(80),
   homeCurrency: z.string().length(3).default("GBP"),
   secondCurrency: z.string().length(3).optional(),
   photoKey: z.string().optional(),
@@ -27,15 +27,16 @@ export async function setupFamily(
   // Check if family already exists
   const existing = await db.family.findFirst();
   if (existing) {
-    redirect("/");
+    const { member } = await requireMember();
+    redirect(member.isAdmin ? "/admin" : "/trips");
   }
 
   const raw = {
     familyName: formData.get("familyName"),
     adminName: formData.get("adminName"),
     homeCurrency: formData.get("homeCurrency") ?? "GBP",
-    secondCurrency: formData.get("secondCurrency") ?? undefined,
-    photoKey: formData.get("photoKey") ?? undefined,
+    secondCurrency: formData.get("secondCurrency") || undefined,
+    photoKey: formData.get("photoKey") || undefined,
   };
 
   const parsed = SetupSchema.safeParse(raw);
@@ -84,5 +85,5 @@ export async function setupFamily(
   const rawToken = await createSession(memberId, undefined);
   await setSessionCookie(rawToken);
 
-  redirect("/");
+  redirect("/admin");
 }
